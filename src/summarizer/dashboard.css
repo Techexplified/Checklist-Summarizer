@@ -1142,3 +1142,364 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* =========================================================================
+   GROUPING HEADERS
+   ========================================================================= */
+.group-header-row td {
+  background: var(--bg-elevated) !important;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px !important;
+}
+
+.group-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group-badge-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.group-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.group-badge-pill {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.group-header-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.group-progress-bar-wrapper {
+  width: 90px;
+  height: 5px;
+  background: var(--bg-hover);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.group-progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+/* =========================================================================
+   SORTABLE COLUMN HEADERS
+   ========================================================================= */
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.th-sortable:hover {
+  color: var(--text-primary);
+}
+
+.sort-arrow-active {
+  color: var(--blue-hover);
+  font-size: 11px;
+}
+
+/* =========================================================================
+   BULK ACTIONS FLOATING BAR
+   ========================================================================= */
+.bulk-action-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(56, 139, 253, 0.35);
+  animation: slideUpBulk 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpBulk {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.bulk-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-right: 1px solid var(--border);
+  padding-right: 14px;
+}
+
+.bulk-badge {
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+.bulk-actions-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-bulk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.btn-bulk-complete {
+  background: var(--green-dim);
+  border-color: rgba(63, 185, 80, 0.3);
+  color: var(--green);
+}
+.btn-bulk-complete:hover {
+  background: rgba(63, 185, 80, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-incomplete {
+  background: var(--bg-hover);
+  border-color: var(--border);
+  color: var(--text-body);
+}
+.btn-bulk-incomplete:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-export {
+  background: var(--blue-dim);
+  border-color: rgba(56, 139, 253, 0.3);
+  color: var(--blue-hover);
+}
+.btn-bulk-export:hover {
+  background: rgba(56, 139, 253, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-bulk-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-bulk-clear:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* =========================================================================
+   ROW ACTIONS DROPDOWN MENU
+   ========================================================================= */
+.row-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.row-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  z-index: 50;
+  min-width: 170px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text-body);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.12s ease;
+}
+
+.row-menu-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.row-menu-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 3px 0;
+}
+
+/* =========================================================================
+   AUTH & SETTINGS DARK MODAL STYLES
+   ========================================================================= */
+.auth-status-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.auth-member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.auth-member-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #ffffff;
+  background: var(--blue);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.btn-trello-connect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: linear-gradient(135deg, #0079bf, #026aa7);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(0, 121, 191, 0.4);
+}
+.btn-trello-connect:hover {
+  background: linear-gradient(135deg, #026aa7, #005a8e);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 121, 191, 0.55);
+}
+
+.btn-trello-disconnect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  background: var(--red-dim);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  color: var(--red);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.15s ease;
+}
+.btn-trello-disconnect:hover {
+  background: rgba(248, 81, 73, 0.25);
+}
+
+.manual-token-card {
+  margin-top: 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.manual-token-input {
+  width: 100%;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: monospace;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+.manual-token-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: var(--shadow-glow);
+}
+

@@ -1,15 +1,23 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   INITIAL_BOARDS,
   INITIAL_ASSIGNEES,
   INITIAL_CHECKLIST_ITEMS,
 } from "../data/mockDashboardData.js";
-import { isAuthorized } from "../lib/auth.js";
+import {
+  isAuthorized,
+  getToken,
+  saveToken,
+  clearToken,
+  buildAuthorizeUrl,
+  AUTH_MESSAGE_SOURCE,
+} from "../lib/auth.js";
 import {
   getBoardCardsWithChecklists,
   getBoardLists,
   getBoardMembers,
   updateCheckItemState,
+  getCurrentMember,
 } from "../lib/trelloApi.js";
 import {
   CheckIcon,
@@ -58,9 +66,13 @@ export default function ChecklistDashboard({ t }) {
   const [boardFilter, setBoardFilter] = useState("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState("ALL");
   const [dueFilter, setDueFilter] = useState("ALL"); // ALL | OVERDUE | TODAY | UPCOMING
-  const [sortBy, setSortBy] = useState("dueDate"); // dueDate | title | priority | assignee | board
+  const [sortBy, setSortBy] = useState("dueDate"); // dueDate | title | priority | assignee | board | parentCard
   const [sortOrder, setSortOrder] = useState("asc"); // asc | desc
   const [groupBy, setGroupBy] = useState("none"); // none | board | priority
+
+  // Refs & Row menu
+  const searchInputRef = useRef(null);
+  const [activeMenuRowId, setActiveMenuRowId] = useState(null);
 
   // Modals
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -68,6 +80,13 @@ export default function ChecklistDashboard({ t }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [previewItem, setPreviewItem] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
+
+  // Settings & Authorization state
+  const [authStatus, setAuthStatus] = useState("checking"); // checking | connected | unauthenticated
+  const [currentMember, setCurrentMember] = useState(null);
+  const [manualToken, setManualToken] = useState("");
+  const [showManualToken, setShowManualToken] = useState(false);
+  const [isSavingToken, setIsSavingToken] = useState(false);
 
   // New task form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -223,10 +242,131 @@ export default function ChecklistDashboard({ t }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
+  // Check auth status
+  const checkAuthStatus = useCallback(async () => {
+    setAuthStatus("checking");
+    try {
+      const authed = await isAuthorized(t);
+      if (!authed) {
+        setAuthStatus("unauthenticated");
+        setCurrentMember(null);
+        return;
+      }
+      const member = await getCurrentMember(t).catch(() => null);
+      if (member) {
+        setCurrentMember(member);
+      }
+      setAuthStatus("connected");
+    } catch (e) {
+      setAuthStatus("unauthenticated");
+      setCurrentMember(null);
+    }
+  }, [t]);
+
   // Auto-load on mount
   useEffect(() => {
     loadRealData();
-  }, [loadRealData]);
+    checkAuthStatus();
+  }, [loadRealData, checkAuthStatus]);
+
+  // Listen for popup auth messages from Trello authorization popup
+  useEffect(() => {
+    async function handleAuthMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || event.data.source !== AUTH_MESSAGE_SOURCE) return;
+      if (event.data.token) {
+        await saveToken(t, event.data.token);
+        showToast("Connected to Trello successfully!");
+        setAuthStatus("connected");
+        setNeedsAuth(false);
+        await checkAuthStatus();
+        await loadRealData();
+      }
+    }
+    window.addEventListener("message", handleAuthMessage);
+    return () => window.removeEventListener("message", handleAuthMessage);
+  }, [t, loadRealData, checkAuthStatus]);
+
+  // Keyboard shortcut: '/' focuses search input; 'Escape' closes modals & menus
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        setIsAddTaskOpen(false);
+        setIsExportOpen(false);
+        setIsSettingsOpen(false);
+        setPreviewItem(null);
+        setActiveMenuRowId(null);
+      }
+    }
+    function handleClickOutside() {
+      setActiveMenuRowId(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("click", handleClickOutside);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
+  // Connect Trello handler
+  function handleConnectTrello() {
+    const returnUrl = `${window.location.origin}/authorized.html`;
+    const authUrl = buildAuthorizeUrl(returnUrl);
+    if (t && typeof t.popup === "function") {
+      t.popup({
+        title: "Authorize Checklist Summarizer",
+        url: "./auth.html",
+        height: 380,
+      });
+    } else {
+      const width = 580;
+      const height = 750;
+      const screenWidth = window.screen?.availWidth || 1280;
+      const screenHeight = window.screen?.availHeight || 800;
+      const left = Math.max(0, Math.round((screenWidth - width) / 2));
+      const top = Math.max(0, Math.round((screenHeight - height) / 2));
+      window.open(
+        authUrl,
+        "trelloAuthPopup",
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+    }
+  }
+
+  // Save manual token handler
+  async function handleSaveManualToken(e) {
+    e.preventDefault();
+    if (!manualToken.trim()) return;
+    setIsSavingToken(true);
+    try {
+      await saveToken(t, manualToken.trim());
+      showToast("Token saved! Loading live board data...");
+      setManualToken("");
+      setShowManualToken(false);
+      setNeedsAuth(false);
+      await checkAuthStatus();
+      await loadRealData();
+    } catch (err) {
+      showToast("Failed to save token: " + (err.message || "Unknown error"));
+    } finally {
+      setIsSavingToken(false);
+    }
+  }
+
+  // Disconnect Trello handler
+  async function handleDisconnectTrello() {
+    await clearToken(t);
+    setIsLive(false);
+    setAuthStatus("unauthenticated");
+    setCurrentMember(null);
+    setItems(INITIAL_CHECKLIST_ITEMS);
+    showToast("Disconnected from Trello.");
+  }
 
   // Toggle item state
   function toggleItemState(id) {
@@ -265,6 +405,67 @@ export default function ChecklistDashboard({ t }) {
       setSelectedItemIds(new Set());
     } else {
       setSelectedItemIds(new Set(filteredList.map((i) => i.id)));
+    }
+  }
+
+  // Bulk Actions
+  function handleBulkComplete() {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (!selectedItemIds.has(it.id)) return it;
+        if (isLive && it._rawCardId && it._rawCheckItemId && it.state !== "complete") {
+          updateCheckItemState(t, it._rawCardId, it._rawCheckItemId, "complete").catch(() => {});
+        }
+        return {
+          ...it,
+          state: "complete",
+          dueStatus: "Completed",
+        };
+      })
+    );
+    showToast(`Marked ${selectedItemIds.size} task(s) as complete`);
+    setSelectedItemIds(new Set());
+  }
+
+  function handleBulkIncomplete() {
+    setItems((prev) =>
+      prev.map((it) => {
+        if (!selectedItemIds.has(it.id)) return it;
+        if (isLive && it._rawCardId && it._rawCheckItemId && it.state !== "incomplete") {
+          updateCheckItemState(t, it._rawCardId, it._rawCheckItemId, "incomplete").catch(() => {});
+        }
+        return {
+          ...it,
+          state: "incomplete",
+          dueStatus: it.isOverdue ? "Overdue" : it.isDueToday ? "Today" : "Upcoming",
+        };
+      })
+    );
+    showToast(`Marked ${selectedItemIds.size} task(s) as incomplete`);
+    setSelectedItemIds(new Set());
+  }
+
+  function handleBulkExportMarkdown() {
+    const selected = filteredItems.filter((i) => selectedItemIds.has(i.id));
+    if (selected.length === 0) return;
+    let md = `### Selected Checklist Tasks (${selected.length})\n\n`;
+    selected.forEach((item) => {
+      const check = item.state === "complete" ? "[x]" : "[ ]";
+      const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "Unassigned";
+      md += `- ${check} **${item.title}** (${item.priority}) — *${item.parentCard}* [@${assignee}] — Due: ${item.dueDate}\n`;
+    });
+    navigator.clipboard.writeText(md).then(() => {
+      showToast(`Copied ${selected.length} selected task(s) to clipboard as Markdown!`);
+    });
+  }
+
+  // Column header click sort
+  function handleHeaderSort(column) {
+    if (sortBy === column) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
     }
   }
 
@@ -315,8 +516,8 @@ export default function ChecklistDashboard({ t }) {
       .sort((a, b) => {
         let valA, valB;
         if (sortBy === "title") {
-          valA = a.title;
-          valB = b.title;
+          valA = (a.title || "").toLowerCase();
+          valB = (b.title || "").toLowerCase();
         } else if (sortBy === "priority") {
           const rank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
           valA = rank[a.priority] || 0;
@@ -324,8 +525,16 @@ export default function ChecklistDashboard({ t }) {
         } else if (sortBy === "assignee") {
           const uA = assignees.find((u) => u.id === a.assigneeId)?.name || "";
           const uB = assignees.find((u) => u.id === b.assigneeId)?.name || "";
-          valA = uA;
-          valB = uB;
+          valA = uA.toLowerCase();
+          valB = uB.toLowerCase();
+        } else if (sortBy === "parentCard") {
+          valA = (a.parentCard || "").toLowerCase();
+          valB = (b.parentCard || "").toLowerCase();
+        } else if (sortBy === "board") {
+          const bA = boards.find((b) => b.id === a.boardId)?.name || "";
+          const bB = boards.find((b) => b.id === b.boardId)?.name || "";
+          valA = bA.toLowerCase();
+          valB = bB.toLowerCase();
         } else {
           // Default: Due date ordering (overdue first, then today, then upcoming)
           const score = (item) => {
@@ -342,7 +551,75 @@ export default function ChecklistDashboard({ t }) {
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
         return 0;
       });
-  }, [items, searchQuery, statusFilter, boardFilter, assigneeFilter, dueFilter, sortBy, sortOrder]);
+  }, [items, searchQuery, statusFilter, boardFilter, assigneeFilter, dueFilter, sortBy, sortOrder, boards, assignees]);
+
+  // Grouped items computation
+  const groupedItems = useMemo(() => {
+    if (groupBy === "none") return null;
+
+    if (groupBy === "board") {
+      const groupMap = {};
+      boards.forEach((b) => {
+        groupMap[b.id] = {
+          id: b.id,
+          title: b.name,
+          icon: b.icon,
+          color: b.color || "#388bfd",
+          items: [],
+        };
+      });
+      groupMap["_other"] = {
+        id: "_other",
+        title: "Other / Unassigned",
+        icon: "cloud",
+        color: "#8b949e",
+        items: [],
+      };
+
+      filteredItems.forEach((item) => {
+        if (groupMap[item.boardId]) {
+          groupMap[item.boardId].items.push(item);
+        } else {
+          groupMap["_other"].items.push(item);
+        }
+      });
+
+      return Object.values(groupMap).filter((g) => g.items.length > 0);
+    }
+
+    if (groupBy === "priority") {
+      const priorityOrder = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+      const priorityConfigs = {
+        CRITICAL: { title: "Critical Priority", color: "#f85149" },
+        HIGH: { title: "High Priority", color: "#d29922" },
+        MEDIUM: { title: "Medium Priority", color: "#388bfd" },
+        LOW: { title: "Low Priority", color: "#8b949e" },
+      };
+
+      const groupMap = {};
+      priorityOrder.forEach((p) => {
+        groupMap[p] = {
+          id: p,
+          title: priorityConfigs[p].title,
+          color: priorityConfigs[p].color,
+          items: [],
+        };
+      });
+
+      filteredItems.forEach((item) => {
+        const p = item.priority || "MEDIUM";
+        if (groupMap[p]) {
+          groupMap[p].items.push(item);
+        } else {
+          groupMap["MEDIUM"].items.push(item);
+        }
+      });
+
+      return priorityOrder.map((p) => groupMap[p]).filter((g) => g.items.length > 0);
+    }
+
+    return null;
+  }, [filteredItems, groupBy, boards]);
 
   // Handle Add Task
   function handleAddTaskSubmit(e) {
@@ -540,15 +817,23 @@ export default function ChecklistDashboard({ t }) {
       {!isLoading && needsAuth && (
         <div className="data-status-bar data-status-mock">
           <AlertCircleIcon width={13} height={13} />
-          <span>
-            Authorization required.{" "}
+          <span style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", width: "100%" }}>
+            <span>Connect your Trello account to sync real cards &amp; checklists:</span>
             <button
+              type="button"
+              className="status-bar-link-btn"
+              onClick={handleConnectTrello}
+              style={{ background: "#0079bf", color: "#fff", textDecoration: "none", padding: "3px 10px", borderRadius: "4px", fontSize: "11px", fontWeight: "600" }}
+            >
+              Connect Trello
+            </button>
+            <button
+              type="button"
               className="status-bar-link-btn"
               onClick={() => setIsSettingsOpen(true)}
             >
-              Open Settings to connect your Trello account
+              Open Settings / Enter Token
             </button>
-            , then click the refresh button.
           </span>
         </div>
       )}
@@ -633,6 +918,7 @@ export default function ChecklistDashboard({ t }) {
           <div className="search-box-wrapper">
             <SearchIcon width={15} height={15} className="search-icon" />
             <input
+              ref={searchInputRef}
               type="text"
               className="search-input"
               placeholder="Search tasks, card names, checklists... (/ to focus)"
@@ -691,6 +977,8 @@ export default function ChecklistDashboard({ t }) {
             >
               <option value="dueDate">Sort: Due Date</option>
               <option value="title">Sort: Checklist Item</option>
+              <option value="parentCard">Sort: Parent Card</option>
+              <option value="board">Sort: Board</option>
               <option value="priority">Sort: Priority</option>
               <option value="assignee">Sort: Assignee</option>
             </select>
@@ -805,183 +1093,294 @@ export default function ChecklistDashboard({ t }) {
                   onChange={() => toggleSelectAll(filteredItems)}
                 />
               </th>
-              <th className="th-item">CHECKLIST ITEM</th>
-              <th className="th-card">PARENT CARD</th>
-              <th className="th-board">BOARD</th>
-              <th className="th-assignee">ASSIGNEE</th>
-              <th className="th-due">
-                <span className="th-sortable" onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}>
-                  DUE DATE {sortOrder === 'asc' ? '↑' : '↓'}
-                </span>
+              <th className="th-item th-sortable" onClick={() => handleHeaderSort("title")}>
+                CHECKLIST ITEM <span className="sort-arrow-active">{sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+              </th>
+              <th className="th-card th-sortable" onClick={() => handleHeaderSort("parentCard")}>
+                PARENT CARD <span className="sort-arrow-active">{sortBy === "parentCard" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+              </th>
+              <th className="th-board th-sortable" onClick={() => handleHeaderSort("board")}>
+                BOARD <span className="sort-arrow-active">{sortBy === "board" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+              </th>
+              <th className="th-assignee th-sortable" onClick={() => handleHeaderSort("assignee")}>
+                ASSIGNEE <span className="sort-arrow-active">{sortBy === "assignee" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+              </th>
+              <th className="th-due th-sortable" onClick={() => handleHeaderSort("dueDate")}>
+                DUE DATE <span className="sort-arrow-active">{sortBy === "dueDate" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
               </th>
               <th className="th-actions">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
-            {filteredItems.map((item) => {
-              const isChecked = item.state === "complete";
-              const isSelected = selectedItemIds.has(item.id);
-              const board = boards.find((b) => b.id === item.boardId);
-              const assignee = assignees.find((u) => u.id === item.assigneeId);
+            {/* Helper function to render each item row */}
+            {(() => {
+              const renderTableRow = (item) => {
+                const isChecked = item.state === "complete";
+                const isSelected = selectedItemIds.has(item.id);
+                const board = boards.find((b) => b.id === item.boardId);
+                const assignee = assignees.find((u) => u.id === item.assigneeId);
+                const isMenuOpen = activeMenuRowId === item.id;
 
-              // Priority badge styling
-              const priorityClass =
-                item.priority === "CRITICAL"
-                  ? "priority-critical"
-                  : item.priority === "HIGH"
-                  ? "priority-high"
-                  : item.priority === "MEDIUM"
-                  ? "priority-medium"
-                  : "priority-low";
+                const priorityClass =
+                  item.priority === "CRITICAL"
+                    ? "priority-critical"
+                    : item.priority === "HIGH"
+                    ? "priority-high"
+                    : item.priority === "MEDIUM"
+                    ? "priority-medium"
+                    : "priority-low";
 
-              return (
-                <tr
-                  key={item.id}
-                  className={`table-row ${isChecked ? "row-completed" : ""} ${
-                    isSelected ? "row-selected" : ""
-                  }`}
-                >
-                  {/* Checkbox for batch select */}
-                  <td className="td-checkbox">
-                    <input
-                      type="checkbox"
-                      className="custom-checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelectItem(item.id)}
-                    />
-                  </td>
-
-                  {/* Checklist Item */}
-                  <td className="td-item">
-                    <div className="item-cell-wrapper">
-                      <button
-                        type="button"
-                        className={`item-toggle-circle ${isChecked ? "done" : ""}`}
-                        onClick={() => toggleItemState(item.id)}
-                        title={isChecked ? "Mark as Incomplete" : "Mark as Complete"}
-                      >
-                        {isChecked && <CheckIcon width={12} height={12} />}
-                      </button>
-
-                      <div className="item-text-group">
-                        <div className={`item-title ${isChecked ? "done-text" : ""}`}>
-                          {item.title}
-                        </div>
-                        <div className="item-meta-line">
-                          <span>Checklist: {item.checklistName}</span>
-                          <span className="dot-divider">·</span>
-                          <span className={`priority-tag ${priorityClass}`}>
-                            {item.priority}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Parent Card */}
-                  <td className="td-card">
-                    <div className="parent-card-name" title={item.parentCardFull}>
-                      {item.parentCard}
-                    </div>
-                    <div className="parent-card-list">
-                      List: {item.listName}
-                    </div>
-                  </td>
-
-                  {/* Board */}
-                  <td className="td-board">
-                    <div className="board-badge-wrapper">
-                      <span
-                        className="board-dot"
-                        style={{ background: board?.color || "#10b981" }}
+                return (
+                  <tr
+                    key={item.id}
+                    className={`table-row ${isChecked ? "row-completed" : ""} ${
+                      isSelected ? "row-selected" : ""
+                    }`}
+                  >
+                    {/* Checkbox for batch select */}
+                    <td className="td-checkbox">
+                      <input
+                        type="checkbox"
+                        className="custom-checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectItem(item.id)}
                       />
-                      <span className="board-icon">
-                        {renderBoardIcon(board?.icon)}
-                      </span>
-                      <span className="board-title" title={board?.name}>
-                        {board?.shortName || board?.name}
-                      </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Assignee */}
-                  <td className="td-assignee">
-                    {assignee ? (
-                      <div className="assignee-wrapper">
-                        <div
-                          className="assignee-avatar"
-                          style={{ background: assignee.bg }}
+                    {/* Checklist Item */}
+                    <td className="td-item">
+                      <div className="item-cell-wrapper">
+                        <button
+                          type="button"
+                          className={`item-toggle-circle ${isChecked ? "done" : ""}`}
+                          onClick={() => toggleItemState(item.id)}
+                          title={isChecked ? "Mark as Incomplete" : "Mark as Complete"}
                         >
-                          {assignee.initials}
+                          {isChecked && <CheckIcon width={12} height={12} />}
+                        </button>
+
+                        <div className="item-text-group">
+                          <div className={`item-title ${isChecked ? "done-text" : ""}`}>
+                            {item.title}
+                          </div>
+                          <div className="item-meta-line">
+                            <span>Checklist: {item.checklistName}</span>
+                            <span className="dot-divider">·</span>
+                            <span className={`priority-tag ${priorityClass}`}>
+                              {item.priority}
+                            </span>
+                          </div>
                         </div>
-                        <span className="assignee-name">{assignee.name}</span>
                       </div>
-                    ) : (
-                      <span className="unassigned-text">Unassigned</span>
-                    )}
-                  </td>
+                    </td>
 
-                  {/* Due Date */}
-                  <td className="td-due">
-                    {item.state === "incomplete" && item.isOverdue ? (
-                      <div className="due-status overdue-danger">
-                        <AlertCircleIcon width={14} height={14} />
-                        <span>{item.dueDate} (Overdue)</span>
+                    {/* Parent Card */}
+                    <td className="td-card">
+                      <div className="parent-card-name" title={item.parentCardFull}>
+                        {item.parentCard}
                       </div>
-                    ) : item.state === "incomplete" && item.isDueToday ? (
-                      <div className="due-status due-today-amber">
-                        <CalendarIcon width={14} height={14} />
-                        <span>{item.dueDate} (Today)</span>
+                      <div className="parent-card-list">
+                        List: {item.listName}
                       </div>
-                    ) : item.state === "complete" ? (
-                      <div className="due-status completed-muted">
-                        <CalendarIcon width={14} height={14} />
-                        <span>{item.dueDate} ({item.dueStatus})</span>
-                      </div>
-                    ) : (
-                      <div className="due-status upcoming-normal">
-                        <CalendarIcon width={14} height={14} />
-                        <span>{item.dueDate}</span>
-                      </div>
-                    )}
-                  </td>
+                    </td>
 
-                  {/* Actions */}
-                  <td className="td-actions">
-                    <div className="actions-cell">
-                      <button
-                        type="button"
-                        className="btn-action-icon"
-                        title="Preview Task Details"
-                        onClick={() => setPreviewItem(item)}
-                      >
-                        <EyeIcon width={15} height={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-action-icon"
-                        title="More options"
-                        onClick={() => {
-                          showToast(`Opened actions for "${item.title.slice(0, 20)}..."`);
-                        }}
-                      >
-                        <MoreHorizontalIcon width={16} height={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                    {/* Board */}
+                    <td className="td-board">
+                      <div className="board-badge-wrapper">
+                        <span
+                          className="board-dot"
+                          style={{ background: board?.color || "#10b981" }}
+                        />
+                        <span className="board-icon">
+                          {renderBoardIcon(board?.icon)}
+                        </span>
+                        <span className="board-title" title={board?.name}>
+                          {board?.shortName || board?.name}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Assignee */}
+                    <td className="td-assignee">
+                      {assignee ? (
+                        <div className="assignee-wrapper">
+                          <div
+                            className="assignee-avatar"
+                            style={{ background: assignee.bg }}
+                          >
+                            {assignee.initials}
+                          </div>
+                          <span className="assignee-name">{assignee.name}</span>
+                        </div>
+                      ) : (
+                        <span className="unassigned-text">Unassigned</span>
+                      )}
+                    </td>
+
+                    {/* Due Date */}
+                    <td className="td-due">
+                      {item.state === "incomplete" && item.isOverdue ? (
+                        <div className="due-status overdue-danger">
+                          <AlertCircleIcon width={14} height={14} />
+                          <span>{item.dueDate} (Overdue)</span>
+                        </div>
+                      ) : item.state === "incomplete" && item.isDueToday ? (
+                        <div className="due-status due-today-amber">
+                          <CalendarIcon width={14} height={14} />
+                          <span>{item.dueDate} (Today)</span>
+                        </div>
+                      ) : item.state === "complete" ? (
+                        <div className="due-status completed-muted">
+                          <CalendarIcon width={14} height={14} />
+                          <span>{item.dueDate} ({item.dueStatus})</span>
+                        </div>
+                      ) : (
+                        <div className="due-status upcoming-normal">
+                          <CalendarIcon width={14} height={14} />
+                          <span>{item.dueDate}</span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="td-actions">
+                      <div className="actions-cell">
+                        <button
+                          type="button"
+                          className="btn-action-icon"
+                          title="Preview Task Details"
+                          onClick={() => setPreviewItem(item)}
+                        >
+                          <EyeIcon width={15} height={15} />
+                        </button>
+
+                        <div className="row-menu-container">
+                          <button
+                            type="button"
+                            className="btn-action-icon"
+                            title="More options"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuRowId((prev) => (prev === item.id ? null : item.id));
+                            }}
+                          >
+                            <MoreHorizontalIcon width={16} height={16} />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div className="row-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="row-menu-item"
+                                onClick={() => {
+                                  toggleItemState(item.id);
+                                  setActiveMenuRowId(null);
+                                }}
+                              >
+                                <CheckIcon width={13} height={13} />
+                                <span>{isChecked ? "Mark Incomplete" : "Mark Complete"}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="row-menu-item"
+                                onClick={() => {
+                                  setPreviewItem(item);
+                                  setActiveMenuRowId(null);
+                                }}
+                              >
+                                <EyeIcon width={13} height={13} />
+                                <span>Inspect Details</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="row-menu-item"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.title);
+                                  showToast("Task title copied!");
+                                  setActiveMenuRowId(null);
+                                }}
+                              >
+                                <CopyIcon width={13} height={13} />
+                                <span>Copy Title</span>
+                              </button>
+
+                              <div className="row-menu-divider" />
+
+                              <button
+                                type="button"
+                                className="row-menu-item"
+                                onClick={() => {
+                                  const md = `- [${isChecked ? "x" : " "}] ${item.title} (${item.priority}) — *${item.parentCard}* Due: ${item.dueDate}`;
+                                  navigator.clipboard.writeText(md);
+                                  showToast("Task Markdown copied!");
+                                  setActiveMenuRowId(null);
+                                }}
+                              >
+                                <CopyIcon width={13} height={13} />
+                                <span>Copy Markdown</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              };
+
+              // Grouped mode rendering
+              if (groupedItems && groupedItems.length > 0) {
+                return groupedItems.map((group) => {
+                  const groupTotal = group.items.length;
+                  const groupCompleted = group.items.filter((i) => i.state === "complete").length;
+                  const groupPercent = groupTotal > 0 ? Math.round((groupCompleted / groupTotal) * 100) : 0;
+
+                  return (
+                    <React.Fragment key={group.id}>
+                      <tr className="group-header-row">
+                        <td colSpan={7}>
+                          <div className="group-header-content">
+                            <div className="group-header-left">
+                              <span
+                                className="group-color-dot"
+                                style={{ background: group.color || "#388bfd" }}
+                              />
+                              <span className="group-badge-indicator">{group.title}</span>
+                              <span className="group-badge-pill">{groupTotal} task{groupTotal !== 1 ? "s" : ""}</span>
+                            </div>
+                            <div className="group-header-stats">
+                              <span>{groupCompleted}/{groupTotal} done ({groupPercent}%)</span>
+                              <div className="group-progress-bar-wrapper">
+                                <div
+                                  className="group-progress-fill"
+                                  style={{ width: `${groupPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {group.items.map((item) => renderTableRow(item))}
+                    </React.Fragment>
+                  );
+                });
+              }
+
+              // Flat mode rendering
+              return filteredItems.map((item) => renderTableRow(item));
+            })()}
 
             {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="td-empty">
                   <div className="empty-state-box">
                     <SlidersIcon width={32} height={32} style={{ color: "#94a3b8", margin: "0 auto 10px" }} />
-                    <p style={{ margin: 0, fontWeight: 600, color: "#334155", fontSize: "14px" }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: "#e2e8f0", fontSize: "14px" }}>
                       No checklist tasks found
                     </p>
-                    <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: "12px" }}>
+                    <p style={{ margin: "4px 0 0", color: "#8b949e", fontSize: "12px" }}>
                       Try clearing your search query or adjusting your status filters.
                     </p>
                   </div>
@@ -991,6 +1390,57 @@ export default function ChecklistDashboard({ t }) {
           </tbody>
         </table>
       </div>
+
+      {/* =========================================================================
+          FLOATING BULK ACTIONS TOOLBAR
+          ========================================================================= */}
+      {selectedItemIds.size > 0 && (
+        <div className="bulk-action-bar">
+          <div className="bulk-info">
+            <span className="bulk-badge">{selectedItemIds.size}</span>
+            <span>task{selectedItemIds.size !== 1 ? "s" : ""} selected</span>
+          </div>
+
+          <div className="bulk-actions-btns">
+            <button
+              type="button"
+              className="btn-bulk btn-bulk-complete"
+              onClick={handleBulkComplete}
+              title="Mark all selected as complete"
+            >
+              <CheckIcon width={13} height={13} />
+              <span>Mark Complete</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-bulk btn-bulk-incomplete"
+              onClick={handleBulkIncomplete}
+              title="Mark all selected as incomplete"
+            >
+              <span>Mark Incomplete</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-bulk btn-bulk-export"
+              onClick={handleBulkExportMarkdown}
+              title="Copy markdown of selected tasks"
+            >
+              <CopyIcon width={13} height={13} />
+              <span>Copy Markdown</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-bulk btn-bulk-clear"
+              onClick={() => setSelectedItemIds(new Set())}
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MODAL: ADD TASK
@@ -1207,7 +1657,7 @@ export default function ChecklistDashboard({ t }) {
             </div>
 
             <div className="modal-body">
-              <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "#0f172a", lineHeight: 1.4 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "var(--text-primary)", lineHeight: 1.4 }}>
                 {previewItem.title}
               </h3>
 
@@ -1235,13 +1685,13 @@ export default function ChecklistDashboard({ t }) {
                 <div className="preview-prop">
                   <span className="prop-label">Board</span>
                   <span className="prop-val">
-                    {INITIAL_BOARDS.find((b) => b.id === previewItem.boardId)?.name}
+                    {boards.find((b) => b.id === previewItem.boardId)?.name || "Current Board"}
                   </span>
                 </div>
                 <div className="preview-prop">
                   <span className="prop-label">Assignee</span>
                   <span className="prop-val">
-                    {INITIAL_ASSIGNEES.find((u) => u.id === previewItem.assigneeId)?.name}
+                    {assignees.find((u) => u.id === previewItem.assigneeId)?.name || "Unassigned"}
                   </span>
                 </div>
               </div>
@@ -1256,6 +1706,7 @@ export default function ChecklistDashboard({ t }) {
                   setPreviewItem((prev) => ({
                     ...prev,
                     state: prev.state === "complete" ? "incomplete" : "complete",
+                    dueStatus: prev.state === "complete" ? (prev.isOverdue ? "Overdue" : prev.isDueToday ? "Today" : "Upcoming") : "Completed",
                   }));
                 }}
               >
@@ -1274,13 +1725,13 @@ export default function ChecklistDashboard({ t }) {
       )}
 
       {/* =========================================================================
-          MODAL: SETTINGS
+          MODAL: SETTINGS & TRELLO INTEGRATION
           ========================================================================= */}
       {isSettingsOpen && (
         <div className="modal-backdrop" onClick={() => setIsSettingsOpen(false)}>
           <div className="modal-dialog max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Power-Up Settings</h2>
+              <h2 className="modal-title">Power-Up Settings &amp; Integration</h2>
               <button
                 type="button"
                 className="modal-close-btn"
@@ -1290,29 +1741,145 @@ export default function ChecklistDashboard({ t }) {
               </button>
             </div>
             <div className="modal-body">
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <div className="assignee-avatar" style={{ background: "#2563eb", width: "42px", height: "42px", fontSize: "16px" }}>
-                  CS
-                </div>
-                <div>
-                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>Checklist Summarizer</strong>
-                  <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Version 2.4.0 (Enterprise)</p>
-                </div>
+              {/* Account Status Card */}
+              <div className="auth-status-card">
+                {authStatus === "connected" ? (
+                  <>
+                    <div className="auth-member-row">
+                      {currentMember?.avatarUrl ? (
+                        <img
+                          src={`${currentMember.avatarUrl}/50.png`}
+                          alt={currentMember.fullName}
+                          className="auth-member-avatar"
+                        />
+                      ) : (
+                        <div className="auth-member-avatar">
+                          {currentMember?.initials || "TR"}
+                        </div>
+                      )}
+                      <div>
+                        <strong style={{ fontSize: "14px", color: "var(--text-primary)" }}>
+                          {currentMember?.fullName || "Trello Member"}
+                        </strong>
+                        <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
+                          @{currentMember?.username || "authenticated"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--green)", fontSize: "12px", fontWeight: "600", marginBottom: "8px" }}>
+                      <CheckCircleIcon width={14} height={14} />
+                      <span>Connected &amp; Authorized</span>
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.4 }}>
+                      Live synchronization active. Checklist items and completion status sync with your board in real time.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="btn-trello-disconnect"
+                      onClick={handleDisconnectTrello}
+                    >
+                      Disconnect Account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--amber)", fontSize: "13px", fontWeight: "700", marginBottom: "8px" }}>
+                      <AlertCircleIcon width={16} height={16} />
+                      <span>Not Connected to Trello</span>
+                    </div>
+                    <p style={{ margin: "0 0 14px", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.45 }}>
+                      Authorize Checklist Summarizer to read live card checklists and check items directly from this Trello board.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="btn-trello-connect"
+                      onClick={handleConnectTrello}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#ffffff">
+                        <path d="M19.5 2H4.5C3.12 2 2 3.12 2 4.5v15C2 20.88 3.12 22 4.5 22h15c1.38 0 2.5-1.12 2.5-2.5v-15C22 3.12 20.88 2 19.5 2zm-8.25 15.25c0 .41-.34.75-.75.75H6c-.41 0-.75-.34-.75-.75V6.75c0-.41.34-.75.75-.75h4.5c.41 0 .75.34.75.75v10.5zm7.5-5.25c0 .41-.34.75-.75.75h-4.5c-.41 0-.75-.34-.75-.75V6.75c0-.41.34-.75.75-.75h4.5c.41 0 .75.34.75.75V12z"/>
+                      </svg>
+                      <span>Connect Trello Account</span>
+                    </button>
+                  </>
+                )}
               </div>
 
-              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", fontSize: "12px", color: "#475569", lineHeight: 1.5 }}>
-                <p style={{ margin: "0 0 6px" }}><strong>Trello Integration Status:</strong></p>
-                <p style={{ margin: 0 }}>Active and synced with 3 boards, 20 checklist tasks, and 5 team assignees.</p>
+              {/* Manual Token Option */}
+              <div style={{ marginTop: "12px" }}>
+                <button
+                  type="button"
+                  style={{ background: "none", border: "none", color: "var(--blue-hover)", fontSize: "12px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                  onClick={() => setShowManualToken((prev) => !prev)}
+                >
+                  {showManualToken ? "▲ Hide manual token entry" : "▼ Or enter Trello API token manually"}
+                </button>
+
+                {showManualToken && (
+                  <form onSubmit={handleSaveManualToken} className="manual-token-card">
+                    <label style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", display: "block" }}>
+                      Paste your Trello User Token:
+                    </label>
+                    <input
+                      type="password"
+                      className="manual-token-input"
+                      placeholder="e.g. ATTA..."
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                    />
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="submit"
+                        disabled={isSavingToken || !manualToken.trim()}
+                        className="btn-modal-primary"
+                        style={{ padding: "6px 12px", fontSize: "12px", flex: 1 }}
+                      >
+                        {isSavingToken ? "Saving…" : "Save & Sync Board"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Demo Mode Toggle */}
+              <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border-subtle)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-primary)", display: "block" }}>
+                      Demo / Sample Data
+                    </span>
+                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                      {isLive ? "Currently showing live Trello board data" : "Currently showing mock sprint sample data"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-light-action"
+                    style={{ padding: "5px 10px", fontSize: "11px" }}
+                    onClick={() => {
+                      if (isLive) {
+                        setIsLive(false);
+                        setItems(INITIAL_CHECKLIST_ITEMS);
+                        showToast("Loaded demo sample dataset.");
+                      } else {
+                        loadRealData();
+                      }
+                    }}
+                  >
+                    {isLive ? "Load Demo Data" : "Refresh Board"}
+                  </button>
+                </div>
               </div>
             </div>
+
             <div className="modal-footer">
               <button
                 type="button"
                 className="btn-modal-primary"
-                onClick={() => {
-                  setIsSettingsOpen(false);
-                  showToast("Settings preserved.");
-                }}
+                onClick={() => setIsSettingsOpen(false)}
               >
                 Done
               </button>
