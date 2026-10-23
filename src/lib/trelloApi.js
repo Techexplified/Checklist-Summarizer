@@ -149,3 +149,37 @@ export function updateCheckItemState(t, cardId, checkItemId, state) {
     },
   });
 }
+
+/**
+ * Fetches members on a Trello board.
+ */
+export function getBoardMembers(t, boardId) {
+  return apiFetch(t, `/boards/${boardId}/members`, {
+    params: {
+      fields: "id,fullName,username,initials,avatarUrl",
+    },
+  });
+}
+
+/**
+ * Creates a new check item in a checklist on Trello.
+ */
+export function createCheckItem(t, checklistId, name, { due = null, idMember = null } = {}) {
+  const params = { name };
+  if (due) params.due = due;
+  if (idMember) params.idMember = idMember;
+  return apiFetch(t, `/checklists/${checklistId}/checkItems`, {
+    method: "POST",
+    params,
+  });
+}
+
+/**
+ * Creates a new checklist on a Trello card.
+ */
+export function createCardChecklist(t, cardId, name = "Checklist") {
+  return apiFetch(t, `/cards/${cardId}/checklists`, {
+    method: "POST",
+    params: { name },
+  });
+}

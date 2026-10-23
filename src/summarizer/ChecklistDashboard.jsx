@@ -1,9 +1,16 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   INITIAL_BOARDS,
   INITIAL_ASSIGNEES,
   INITIAL_CHECKLIST_ITEMS,
 } from "../data/mockDashboardData.js";
+import { isAuthorized } from "../lib/auth.js";
+import {
+  getBoardCardsWithChecklists,
+  getBoardLists,
+  getBoardMembers,
+  updateCheckItemState,
+} from "../lib/trelloApi.js";
 import {
   CheckIcon,
   CheckCircleIcon,
@@ -29,9 +36,21 @@ import {
   ChevronDownIcon,
   AlertCircleIcon,
   CopyIcon,
+  RefreshCwIcon,
 } from "../lib/icons.jsx";
 
+
 export default function ChecklistDashboard({ t }) {
+  // ── Live data state ──────────────────────────────────────────────────────
+  const [isLive, setIsLive] = useState(false);          // true = real Trello data loaded
+  const [isLoading, setIsLoading] = useState(false);
+  const [liveBoards, setLiveBoards] = useState([]);     // [{id, name, color}]
+  const [liveAssignees, setLiveAssignees] = useState([]); // [{id, name, initials, bg}]
+
+  const boards = isLive ? liveBoards : INITIAL_BOARDS;
+  const assignees = isLive ? liveAssignees : INITIAL_ASSIGNEES;
+
+  // ── Item list ──────────────────────────────────────────────────────────
   const [items, setItems] = useState(INITIAL_CHECKLIST_ITEMS);
   const [selectedItemIds, setSelectedItemIds] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,12 +83,160 @@ export default function ChecklistDashboard({ t }) {
     setTimeout(() => setToastMsg(null), 3000);
   }
 
+  // ── Live Trello data loader ──────────────────────────────────────────────
+  const loadRealData = useCallback(async () => {
+    if (!t) return;
+    try {
+      const authed = await isAuthorized(t).catch(() => false);
+      if (!authed) return; // stay on mock data
+
+      setIsLoading(true);
+
+      // 1. Get board id
+      const board = await t.board("id", "name").catch(() => null);
+      if (!board || !board.id) return;
+
+      // 2. Fetch cards (with checklists), lists, and members in parallel
+      const [rawCards, rawLists, rawMembers] = await Promise.all([
+        getBoardCardsWithChecklists(t, board.id).catch(() => []),
+        getBoardLists(t, board.id).catch(() => []),
+        getBoardMembers(t, board.id).catch(() => []),
+      ]);
+
+      // Build lookup maps
+      const listMap = {};
+      rawLists.forEach((l) => { listMap[l.id] = l.name; });
+
+      const memberMap = {};
+      const AVATAR_COLORS = ["#f97316","#2563eb","#7c3aed","#0891b2","#059669","#dc2626","#db2777","#65a30d"];
+      rawMembers.forEach((m, idx) => {
+        memberMap[m.id] = {
+          id: m.id,
+          name: m.fullName || m.username,
+          initials: m.initials || (m.fullName || m.username || "?").slice(0, 2).toUpperCase(),
+          bg: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+          avatarUrl: m.avatarUrl || null,
+        };
+      });
+
+      // Build boards list (just the one board for now)
+      const liveBoardList = [{
+        id: board.id,
+        name: board.name,
+        shortName: board.name.length > 22 ? board.name.slice(0, 22) + "…" : board.name,
+        color: "#2563eb",
+        icon: "cloud",
+      }];
+
+      // Flatten all checklist items across all cards
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const flatItems = [];
+      for (const card of rawCards) {
+        if (!Array.isArray(card.checklists) || card.checklists.length === 0) continue;
+        const listName = listMap[card.idList] || "Unknown List";
+        const cardName = card.name || "Untitled Card";
+        const cardShort = cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName;
+
+        for (const cl of card.checklists) {
+          const checkItems = cl.checkItems || [];
+          for (const ci of checkItems) {
+            const isComplete = ci.state === "complete";
+            let isDueToday = false;
+            let isOverdue = false;
+            let dueDateLabel = "";
+            let dueStatus = "Upcoming";
+
+            if (ci.due) {
+              const dueDate = new Date(ci.due);
+              const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+              dueDateLabel = dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              if (!isComplete) {
+                isOverdue = dueDay < today;
+                isDueToday = dueDay.getTime() === today.getTime();
+                dueStatus = isOverdue ? "Overdue" : isDueToday ? "Today" : "Upcoming";
+              } else {
+                dueStatus = "Completed";
+              }
+            } else {
+              // No due date — infer from card due
+              if (card.due) {
+                const cardDue = new Date(card.due);
+                dueDateLabel = cardDue.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                if (!isComplete) {
+                  const cardDueDay = new Date(cardDue.getFullYear(), cardDue.getMonth(), cardDue.getDate());
+                  isOverdue = cardDueDay < today;
+                  isDueToday = cardDueDay.getTime() === today.getTime();
+                  dueStatus = isOverdue ? "Overdue" : isDueToday ? "Today" : "Upcoming";
+                } else {
+                  dueStatus = "Completed";
+                }
+              } else {
+                dueDateLabel = "No due date";
+              }
+            }
+
+            // Assignee: use item-level member if set, otherwise first card member
+            const memberId = ci.idMember || (card.idMembers && card.idMembers[0]) || null;
+
+            flatItems.push({
+              id: `${card.id}-${cl.id}-${ci.id}`,
+              _rawCardId: card.id,
+              _rawChecklistId: cl.id,
+              _rawCheckItemId: ci.id,
+              title: ci.name,
+              checklistName: cl.name,
+              priority: "MEDIUM", // Trello has no native priority field
+              parentCard: cardShort,
+              parentCardFull: cardName,
+              listName,
+              boardId: board.id,
+              assigneeId: memberId,
+              dueDate: dueDateLabel,
+              dueStatus,
+              state: ci.state,
+              isDueToday,
+              isOverdue,
+            });
+          }
+        }
+      }
+
+      setLiveBoards(liveBoardList);
+      setLiveAssignees(Object.values(memberMap));
+      setItems(flatItems.length > 0 ? flatItems : INITIAL_CHECKLIST_ITEMS);
+      setIsLive(flatItems.length > 0);
+      if (flatItems.length > 0) {
+        showToast(`Loaded ${flatItems.length} checklist items from Trello`);
+      }
+    } catch (err) {
+      console.error("loadRealData failed:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
+
+  // Auto-load on mount
+  useEffect(() => {
+    loadRealData();
+  }, [loadRealData]);
+
   // Toggle item state
   function toggleItemState(id) {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
         const nextState = item.state === "complete" ? "incomplete" : "complete";
+        // If live mode, call Trello API asynchronously (fire-and-forget; optimistic UI)
+        if (isLive && item._rawCardId && item._rawCheckItemId) {
+          updateCheckItemState(t, item._rawCardId, item._rawCheckItemId, nextState).catch(() => {
+            showToast("Failed to update item on Trello — please refresh");
+          });
+        }
         return {
           ...item,
           state: nextState,
@@ -131,9 +298,9 @@ export default function ChecklistDashboard({ t }) {
           const matchesTitle = item.title.toLowerCase().includes(q);
           const matchesCard = item.parentCard.toLowerCase().includes(q);
           const matchesChecklist = item.checklistName.toLowerCase().includes(q);
-          const board = INITIAL_BOARDS.find((b) => b.id === item.boardId);
+          const board = boards.find((b) => b.id === item.boardId);
           const matchesBoard = board ? board.name.toLowerCase().includes(q) : false;
-          const assignee = INITIAL_ASSIGNEES.find((u) => u.id === item.assigneeId);
+          const assignee = assignees.find((u) => u.id === item.assigneeId);
           const matchesAssignee = assignee ? assignee.name.toLowerCase().includes(q) : false;
           if (!matchesTitle && !matchesCard && !matchesChecklist && !matchesBoard && !matchesAssignee) {
             return false;
@@ -152,8 +319,8 @@ export default function ChecklistDashboard({ t }) {
           valA = rank[a.priority] || 0;
           valB = rank[b.priority] || 0;
         } else if (sortBy === "assignee") {
-          const uA = INITIAL_ASSIGNEES.find((u) => u.id === a.assigneeId)?.name || "";
-          const uB = INITIAL_ASSIGNEES.find((u) => u.id === b.assigneeId)?.name || "";
+          const uA = assignees.find((u) => u.id === a.assigneeId)?.name || "";
+          const uB = assignees.find((u) => u.id === b.assigneeId)?.name || "";
           valA = uA;
           valB = uB;
         } else {
@@ -216,7 +383,7 @@ export default function ChecklistDashboard({ t }) {
 
     filteredItems.forEach((item) => {
       const check = item.state === "complete" ? "[x]" : "[ ]";
-      const assignee = INITIAL_ASSIGNEES.find((u) => u.id === item.assigneeId)?.name || "Unassigned";
+      const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "Unassigned";
       md += `- ${check} **${item.title}** (${item.priority}) — *${item.parentCard}* [@${assignee}] — Due: ${item.dueDate}\n`;
     });
 
@@ -232,8 +399,8 @@ export default function ChecklistDashboard({ t }) {
   function handleExportCSV() {
     const headers = ["Checklist Item", "State", "Checklist", "Priority", "Parent Card", "Board", "Assignee", "Due Date"];
     const rows = filteredItems.map((item) => {
-      const board = INITIAL_BOARDS.find((b) => b.id === item.boardId)?.name || "";
-      const assignee = INITIAL_ASSIGNEES.find((u) => u.id === item.assigneeId)?.name || "";
+      const board = boards.find((b) => b.id === item.boardId)?.name || "";
+      const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "";
       return [
         `"${item.title.replace(/"/g, '""')}"`,
         item.state,
@@ -321,6 +488,22 @@ export default function ChecklistDashboard({ t }) {
             <span>Export</span>
           </button>
 
+          {/* Refresh Live Data */}
+          {t && (
+            <button
+              type="button"
+              className={`btn-icon-square ${isLoading ? "btn-loading" : ""}`}
+              onClick={loadRealData}
+              title={isLive ? "Refresh from Trello" : "Load from Trello"}
+              id="btn-refresh"
+              disabled={isLoading}
+            >
+              {isLoading
+                ? <span className="spin-icon" style={{display:"inline-flex",animation:"spin 1s linear infinite"}}><RefreshCwIcon width={15} height={15} /></span>
+                : <RefreshCwIcon width={15} height={15} />}
+            </button>
+          )}
+
           <button
             type="button"
             className="btn-icon-square"
@@ -342,6 +525,20 @@ export default function ChecklistDashboard({ t }) {
           </button>
         </div>
       </header>
+
+      {/* Live / Mock data status bar */}
+      {t && !isLoading && !isLive && (
+        <div className="data-status-bar data-status-mock">
+          <AlertCircleIcon width={13} height={13} />
+          <span>Showing sample data. Click <strong>Refresh</strong> to load live Trello data (requires authorization).</span>
+        </div>
+      )}
+      {isLive && (
+        <div className="data-status-bar data-status-live">
+          <CheckCircleIcon width={13} height={13} />
+          <span>Live data from Trello &mdash; {items.length} checklist item{items.length !== 1 ? "s" : ""} loaded</span>
+        </div>
+      )}
 
       {/* =========================================================================
           5 STAT METRIC CARDS
@@ -513,8 +710,8 @@ export default function ChecklistDashboard({ t }) {
                   onChange={(e) => setBoardFilter(e.target.value)}
                   className="sub-filter-select"
                 >
-                  <option value="ALL">All Boards ({INITIAL_BOARDS.length})</option>
-                  {INITIAL_BOARDS.map((b) => (
+                  <option value="ALL">All Boards ({boards.length})</option>
+                  {boards.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
                     </option>
@@ -535,7 +732,7 @@ export default function ChecklistDashboard({ t }) {
                   className="sub-filter-select"
                 >
                   <option value="ALL">Everyone</option>
-                  {INITIAL_ASSIGNEES.map((u) => (
+                  {assignees.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
                     </option>
@@ -604,8 +801,8 @@ export default function ChecklistDashboard({ t }) {
             {filteredItems.map((item) => {
               const isChecked = item.state === "complete";
               const isSelected = selectedItemIds.has(item.id);
-              const board = INITIAL_BOARDS.find((b) => b.id === item.boardId);
-              const assignee = INITIAL_ASSIGNEES.find((u) => u.id === item.assigneeId);
+              const board = boards.find((b) => b.id === item.boardId);
+              const assignee = assignees.find((u) => u.id === item.assigneeId);
 
               // Priority badge styling
               const priorityClass =
@@ -815,7 +1012,7 @@ export default function ChecklistDashboard({ t }) {
                       value={newTaskBoard}
                       onChange={(e) => setNewTaskBoard(e.target.value)}
                     >
-                      {INITIAL_BOARDS.map((b) => (
+                      {boards.map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.name}
                         </option>
@@ -868,7 +1065,7 @@ export default function ChecklistDashboard({ t }) {
                       value={newTaskAssignee}
                       onChange={(e) => setNewTaskAssignee(e.target.value)}
                     >
-                      {INITIAL_ASSIGNEES.map((u) => (
+                      {assignees.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.name} ({u.initials})
                         </option>
