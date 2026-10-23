@@ -28,7 +28,10 @@ import {
   SpinnerIcon,
   FilterIcon,
 } from "../lib/icons.jsx";
+import ChecklistDashboard from "./ChecklistDashboard.jsx";
 import "./summarizer.css";
+import "./dashboard.css";
+
 
 export default function SummarizerApp({ t }) {
   const [viewMode, setViewMode] = useState("card"); // 'card' | 'card-back-section' | 'board'
@@ -47,10 +50,10 @@ export default function SummarizerApp({ t }) {
     const view = urlParams.get("view");
     if (view === "card-back-section") {
       setViewMode("card-back-section");
-    } else if (view === "board") {
-      setViewMode("board");
+    } else if (view === "single-card") {
+      setViewMode("single-card");
     } else {
-      setViewMode("card");
+      setViewMode("dashboard");
     }
   }, []);
 
@@ -314,10 +317,18 @@ export default function SummarizerApp({ t }) {
   }
 
   // -------------------------------------------------------------------------
-  // VIEW: Board-Wide Checklists Rollup View
+  // VIEW: Centralized Checklist Dashboard (Cross-card task aggregator)
+  // -------------------------------------------------------------------------
+  if (viewMode !== "single-card") {
+    return <ChecklistDashboard t={t} />;
+  }
+
+  // -------------------------------------------------------------------------
+  // VIEW: Board-Wide Checklists Rollup View (Legacy)
   // -------------------------------------------------------------------------
   if (viewMode === "board") {
     const analysis = boardData?.analysis;
+
 
     return (
       <div className="summarizer-app">
