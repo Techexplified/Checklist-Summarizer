@@ -740,6 +740,18 @@ export default function ChecklistDashboard({ t }) {
             <div className="brand-title-row">
               <h1 className="brand-title">Checklist Summary</h1>
               <span className="powerup-badge">POWER-UP</span>
+              {isLive && (
+                <span className="live-sync-chip" title="Real-time data synced from Trello board">
+                  <span className="live-pulse-dot" />
+                  <span>Live Sync ({items.length})</span>
+                </span>
+              )}
+              {isLoading && (
+                <span className="loading-sync-chip">
+                  <span className="spin-icon"><RefreshCwIcon width={11} height={11} /></span>
+                  <span>Syncing…</span>
+                </span>
+              )}
             </div>
             <p className="brand-subtitle">
               Cross-card task aggregator &amp; centralized checklist manager
@@ -806,42 +818,29 @@ export default function ChecklistDashboard({ t }) {
         </div>
       </header>
 
-      {/* ── Status banners ─────────────────────────────────────────────────── */}
-      {isLoading && (
-        <div className="data-status-bar data-status-loading">
-          <span className="spin-icon"><RefreshCwIcon width={13} height={13} /></span>
-          <span>Loading live data from your Trello board&hellip;</span>
-        </div>
-      )}
-
+      {/* ── Optional Auth Alert Banner (Only when authorization is needed) ───────── */}
       {!isLoading && needsAuth && (
-        <div className="data-status-bar data-status-mock">
-          <AlertCircleIcon width={13} height={13} />
-          <span style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", width: "100%" }}>
-            <span>Connect your Trello account to sync real cards &amp; checklists:</span>
+        <div className="auth-notice-banner">
+          <div className="auth-notice-left">
+            <AlertCircleIcon width={15} height={15} className="auth-notice-icon" />
+            <span>Connect your Trello account to sync real checklists across your boards:</span>
+          </div>
+          <div className="auth-notice-actions">
             <button
               type="button"
-              className="status-bar-link-btn"
+              className="btn-auth-notice-connect"
               onClick={handleConnectTrello}
-              style={{ background: "#0079bf", color: "#fff", textDecoration: "none", padding: "3px 10px", borderRadius: "4px", fontSize: "11px", fontWeight: "600" }}
             >
               Connect Trello
             </button>
             <button
               type="button"
-              className="status-bar-link-btn"
+              className="btn-auth-notice-settings"
               onClick={() => setIsSettingsOpen(true)}
             >
-              Open Settings / Enter Token
+              Settings
             </button>
-          </span>
-        </div>
-      )}
-
-      {!isLoading && !needsAuth && isLive && (
-        <div className="data-status-bar data-status-live">
-          <CheckCircleIcon width={13} height={13} />
-          <span>Live data from Trello &mdash; {items.length} checklist item{items.length !== 1 ? "s" : ""} loaded</span>
+          </div>
         </div>
       )}
 
@@ -853,17 +852,17 @@ export default function ChecklistDashboard({ t }) {
         <div className="metric-card">
           <div className="metric-card-top">
             <span className="metric-label">Total Items</span>
-            <SlidersIcon width={16} height={16} className="metric-icon-muted" />
+            <SlidersIcon width={15} height={15} className="metric-icon-muted" />
           </div>
           <div className="metric-value">{totalItems}</div>
-          <div className="metric-subtext">Across all synced cards</div>
+          <div className="metric-subtext">Across synced cards</div>
         </div>
 
         {/* Card 2: Completion Rate */}
         <div className="metric-card">
           <div className="metric-card-top">
-            <span className="metric-label">Completion Rate</span>
-            <CheckCircleIcon width={17} height={17} className="metric-icon-green" />
+            <span className="metric-label">Completion</span>
+            <CheckCircleIcon width={15} height={15} className="metric-icon-green" />
           </div>
           <div className="metric-value-row">
             <span className="metric-value">{completionPercent}%</span>
@@ -880,8 +879,8 @@ export default function ChecklistDashboard({ t }) {
         {/* Card 3: Pending Tasks */}
         <div className="metric-card">
           <div className="metric-card-top">
-            <span className="metric-label">Pending Tasks</span>
-            <ClockIcon width={16} height={16} className="metric-icon-blue" />
+            <span className="metric-label">Pending</span>
+            <ClockIcon width={15} height={15} className="metric-icon-blue" />
           </div>
           <div className="metric-value">{pendingCount}</div>
           <div className="metric-subtext">Require action</div>
@@ -891,7 +890,7 @@ export default function ChecklistDashboard({ t }) {
         <div className="metric-card card-overdue">
           <div className="metric-card-top">
             <span className="metric-label red">Overdue</span>
-            <AlertTriangleIcon width={16} height={16} className="metric-icon-red" />
+            <AlertTriangleIcon width={15} height={15} className="metric-icon-red" />
           </div>
           <div className="metric-value red">{overdueCount}</div>
           <div className="metric-subtext red">Past deadline</div>
@@ -901,10 +900,10 @@ export default function ChecklistDashboard({ t }) {
         <div className="metric-card card-due-today">
           <div className="metric-card-top">
             <span className="metric-label amber">Due Today</span>
-            <CalendarIcon width={16} height={16} className="metric-icon-amber" />
+            <CalendarIcon width={15} height={15} className="metric-icon-amber" />
           </div>
           <div className="metric-value amber">{dueTodayCount}</div>
-          <div className="metric-subtext amber">Needs attention today</div>
+          <div className="metric-subtext amber">Action needed</div>
         </div>
       </div>
 
@@ -916,12 +915,12 @@ export default function ChecklistDashboard({ t }) {
         <div className="controls-top-row">
           {/* Search Input */}
           <div className="search-box-wrapper">
-            <SearchIcon width={15} height={15} className="search-icon" />
+            <SearchIcon width={14} height={14} className="search-icon" />
             <input
               ref={searchInputRef}
               type="text"
               className="search-input"
-              placeholder="Search tasks, card names, checklists... (/ to focus)"
+              placeholder="Search checklist tasks, cards, members... (/ to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -954,22 +953,22 @@ export default function ChecklistDashboard({ t }) {
 
           {/* Group Dropdown */}
           <div className="dropdown-control-wrapper">
-            <LayersIcon width={15} height={15} style={{ color: "#64748b" }} />
+            <LayersIcon width={14} height={14} style={{ color: "var(--text-muted)" }} />
             <select
               className="custom-select"
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value)}
             >
-              <option value="none">Group: None (Flat Table)</option>
+              <option value="none">Group: Flat Table</option>
               <option value="board">Group: By Board</option>
               <option value="priority">Group: By Priority</option>
             </select>
-            <ChevronDownIcon width={12} height={12} className="select-chevron" />
+            <ChevronDownIcon width={11} height={11} className="select-chevron" />
           </div>
 
           {/* Sort Dropdown */}
           <div className="dropdown-control-wrapper">
-            <ArrowUpDownIcon width={15} height={15} style={{ color: "#64748b" }} />
+            <ArrowUpDownIcon width={14} height={14} style={{ color: "var(--text-muted)" }} />
             <select
               className="custom-select"
               value={sortBy}
@@ -982,7 +981,7 @@ export default function ChecklistDashboard({ t }) {
               <option value="priority">Sort: Priority</option>
               <option value="assignee">Sort: Assignee</option>
             </select>
-            <ChevronDownIcon width={12} height={12} className="select-chevron" />
+            <ChevronDownIcon width={11} height={11} className="select-chevron" />
           </div>
 
           {/* Asc / Desc Button */}
@@ -1031,7 +1030,7 @@ export default function ChecklistDashboard({ t }) {
 
             {/* Assignee Filter */}
             <div className="inline-filter-item">
-              <UserIcon width={14} height={14} className="filter-item-icon" />
+              <UserIcon width={13} height={13} className="filter-item-icon" />
               <span className="filter-item-label">Assignee:</span>
               <div className="inline-select-container">
                 <select
@@ -1052,7 +1051,7 @@ export default function ChecklistDashboard({ t }) {
 
             {/* Due Date Filter */}
             <div className="inline-filter-item">
-              <CalendarIcon width={14} height={14} className="filter-item-icon" />
+              <CalendarIcon width={13} height={13} className="filter-item-icon" />
               <span className="filter-item-label">Due:</span>
               <div className="inline-select-container">
                 <select
@@ -1094,21 +1093,48 @@ export default function ChecklistDashboard({ t }) {
                 />
               </th>
               <th className="th-item th-sortable" onClick={() => handleHeaderSort("title")}>
-                CHECKLIST ITEM <span className="sort-arrow-active">{sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+                <span className="th-inner">
+                  CHECKLIST ITEM
+                  {sortBy === "title" && (
+                    <span className="sort-arrow-active">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
               </th>
               <th className="th-card th-sortable" onClick={() => handleHeaderSort("parentCard")}>
-                PARENT CARD <span className="sort-arrow-active">{sortBy === "parentCard" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+                <span className="th-inner">
+                  PARENT CARD
+                  {sortBy === "parentCard" && (
+                    <span className="sort-arrow-active">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
               </th>
               <th className="th-board th-sortable" onClick={() => handleHeaderSort("board")}>
-                BOARD <span className="sort-arrow-active">{sortBy === "board" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+                <span className="th-inner">
+                  BOARD
+                  {sortBy === "board" && (
+                    <span className="sort-arrow-active">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
               </th>
               <th className="th-assignee th-sortable" onClick={() => handleHeaderSort("assignee")}>
-                ASSIGNEE <span className="sort-arrow-active">{sortBy === "assignee" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+                <span className="th-inner">
+                  ASSIGNEE
+                  {sortBy === "assignee" && (
+                    <span className="sort-arrow-active">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
               </th>
               <th className="th-due th-sortable" onClick={() => handleHeaderSort("dueDate")}>
-                DUE DATE <span className="sort-arrow-active">{sortBy === "dueDate" ? (sortOrder === "asc" ? "▲" : "▼") : ""}</span>
+                <span className="th-inner">
+                  DUE DATE
+                  {sortBy === "dueDate" && (
+                    <span className="sort-arrow-active">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
               </th>
-              <th className="th-actions">ACTIONS</th>
+              <th className="th-actions">
+                <span className="th-inner">ACTIONS</span>
+              </th>
             </tr>
           </thead>
           <tbody>
