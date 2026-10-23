@@ -199,18 +199,18 @@ body {
 }
 
 /* =========================================================================
-   2. METRICS CARDS (SINGLE-ROW 5-COLUMN GRID)
+   2. METRICS CARDS (3 SPACIOUS COLUMNS — UNCROWDED & READABLE)
    ========================================================================= */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 640px) {
   .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 
@@ -218,12 +218,13 @@ body {
   background: var(--dash-card);
   border: 1px solid var(--dash-border);
   border-radius: var(--dash-radius);
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   transition: all 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  min-width: 0;
+  min-height: 96px;
 }
 
 .metric-card:hover {
@@ -235,7 +236,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .metric-label {
@@ -244,85 +245,126 @@ body {
   color: var(--dash-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.metric-icon-muted { color: var(--dash-text-subtle); }
-.metric-icon-green { color: var(--dash-green); }
-.metric-icon-blue { color: var(--dash-blue-primary); }
-.metric-icon-red { color: var(--dash-red); }
-.metric-icon-amber { color: var(--dash-amber); }
-
-.metric-value {
-  font-size: 20px;
+.metric-badge {
+  font-size: 11px;
   font-weight: 700;
-  color: var(--dash-text-dark);
-  line-height: 1.15;
-  margin: 1px 0 3px;
-  letter-spacing: -0.3px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.2px;
+}
+
+.metric-badge.green {
+  background: rgba(75, 206, 151, 0.16);
+  color: #4bce97;
+  border: 1px solid rgba(75, 206, 151, 0.3);
+}
+
+.metric-badge.blue {
+  background: rgba(87, 157, 255, 0.16);
+  color: #579dff;
+  border: 1px solid rgba(87, 157, 255, 0.3);
+}
+
+.metric-badge.red {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .metric-value-row {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  margin: 1px 0 3px;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dash-text-dark);
+  line-height: 1.1;
+  letter-spacing: -0.3px;
 }
 
 .metric-count {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--dash-text-muted);
+}
+
+.metric-progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+
+.metric-progress-fill {
+  height: 100%;
+  background: #4bce97;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
 }
 
 .metric-subtext {
   font-size: 11px;
   color: var(--dash-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.metric-progress-track {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
-  overflow: hidden;
-  margin-top: 4px;
+/* Alert Pills on Card 3 */
+.metric-alerts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 6px;
 }
 
-.metric-progress-fill {
-  height: 100%;
-  background: var(--dash-green);
-  border-radius: 9999px;
-  transition: width 0.4s ease;
+.alert-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-/* Overdue Card */
-.metric-card.card-overdue {
-  background: var(--dash-red-bg);
-  border-color: var(--dash-red-border);
+.alert-pill.overdue-pill {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
-.metric-label.red,
-.metric-value.red,
-.metric-subtext.red {
-  color: var(--dash-red);
+.alert-pill.overdue-pill:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: translateY(-1px);
 }
 
-/* Due Today Card */
-.metric-card.card-due-today {
-  background: var(--dash-amber-bg);
-  border-color: var(--dash-amber-border);
+.alert-pill.today-pill {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
 }
 
-.metric-label.amber,
-.metric-value.amber,
-.metric-subtext.amber {
-  color: var(--dash-amber-dark);
+.alert-pill.today-pill:hover {
+  background: rgba(245, 158, 11, 0.25);
+  transform: translateY(-1px);
+}
+
+.alert-num {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.alert-text {
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* =========================================================================
@@ -500,7 +542,7 @@ body {
 }
 
 /* =========================================================================
-   4. DATA TABLE (STICKY HEADER & CLEAN ROWS)
+   4. DATA TABLE (5 COLUMNS — ROOMY & NO CLIPPING)
    ========================================================================= */
 .table-card {
   background: var(--dash-card);
@@ -533,18 +575,12 @@ body {
   white-space: nowrap;
 }
 
-.th-checkbox {
-  width: 36px;
-  text-align: center;
-  padding-left: 12px !important;
-}
-
-.th-item { width: 34%; }
-.th-card { width: 22%; }
-.th-board { width: 16%; }
-.th-assignee { width: 14%; }
-.th-due { width: 14%; }
-.th-actions { width: 44px; text-align: right; padding-right: 12px !important; }
+/* Clean Column Proportions */
+.th-checkbox { width: 34px; text-align: center; padding-left: 10px !important; }
+.th-item { width: 44%; }
+.th-card { width: 26%; }
+.th-assignee { width: 15%; }
+.th-due { width: 15%; }
 
 .th-sortable {
   cursor: pointer;
@@ -580,7 +616,7 @@ body {
 
 .td-checkbox {
   text-align: center;
-  padding-left: 12px !important;
+  padding-left: 10px !important;
 }
 
 .custom-checkbox {
@@ -600,26 +636,28 @@ body {
   gap: 8px;
 }
 
-.item-check-circle {
+.item-toggle-circle {
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  border: 1.5px solid var(--dash-border);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   margin-top: 2px;
-  transition: all 0.15s ease;
   background: #181c20;
+  color: #ffffff;
+  padding: 0;
+  transition: all 0.15s ease;
 }
 
-.item-check-circle:hover {
+.item-toggle-circle:hover {
   border-color: var(--dash-green);
 }
 
-.item-check-circle.completed {
+.item-toggle-circle.done {
   background: var(--dash-green);
   border-color: var(--dash-green);
 }
@@ -630,25 +668,27 @@ body {
   gap: 2px;
 }
 
-.item-title-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.item-title-text {
+.item-title {
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--dash-text-dark);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
-.item-title-text.item-completed {
+.item-title.done-text {
   text-decoration: line-through;
   color: var(--dash-text-subtle);
 }
 
-.priority-badge {
+.item-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--dash-text-muted);
+}
+
+.priority-tag {
   font-size: 9.5px;
   font-weight: 700;
   padding: 1px 5px;
@@ -679,48 +719,46 @@ body {
   color: var(--dash-text-muted);
 }
 
-.item-checklist-name {
-  font-size: 11px;
-  color: var(--dash-text-muted);
-}
-
-/* Parent Card Cell */
-.parent-card-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
+/* Parent Card & Board Subline */
 .parent-card-name {
   font-weight: 500;
   color: var(--dash-text-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 240px;
 }
 
-.parent-card-list {
-  font-size: 10.5px;
+.card-board-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--dash-text-subtle);
+  margin-top: 2px;
 }
 
-/* Board Cell */
-.board-cell-pill {
+.board-pill-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: #181c20;
-  border: 1px solid var(--dash-border);
-  font-size: 11.5px;
-  color: var(--dash-text-dark);
-  white-space: nowrap;
+  gap: 4px;
+  color: var(--dash-text-muted);
+}
+
+.board-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-divider {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 10px;
 }
 
 /* Assignee Cell */
-.assignee-cell {
+.assignee-wrapper {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -746,62 +784,47 @@ body {
   white-space: nowrap;
 }
 
-/* Due Date Cell */
-.due-badge {
+.unassigned-text {
+  font-size: 11.5px;
+  color: var(--dash-text-subtle);
+  font-style: italic;
+}
+
+/* Due Date Badges */
+.due-status {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
 }
 
-.due-badge.overdue {
-  background: var(--dash-red-bg);
-  color: var(--dash-red);
-  border: 1px solid var(--dash-red-border);
+.due-status.overdue-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-weight: 600;
 }
 
-.due-badge.today {
-  background: var(--dash-amber-bg);
-  color: var(--dash-amber-dark);
-  border: 1px solid var(--dash-amber-border);
+.due-status.due-today-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  font-weight: 600;
 }
 
-.due-badge.upcoming {
+.due-status.completed-muted {
+  color: #4bce97;
+  background: rgba(75, 206, 151, 0.12);
+  border: 1px solid rgba(75, 206, 151, 0.25);
+}
+
+.due-status.upcoming-normal {
   color: var(--dash-text-muted);
-}
-
-.due-badge.completed {
-  color: var(--dash-green);
-}
-
-/* Row Action Buttons */
-.row-actions-group {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.btn-row-action {
-  background: transparent;
-  border: none;
-  color: var(--dash-text-subtle);
-  cursor: pointer;
-  padding: 3px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.btn-row-action:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--dash-text-dark);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* =========================================================================

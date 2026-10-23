@@ -345,28 +345,19 @@ export default function ChecklistDashboard({ t }) {
       </header>
 
       {/* =========================================================================
-          5 STAT METRIC CARDS
+      {/* =========================================================================
+          SPACIOUS 3-CARD METRICS STRIP (Uncrowded & Clean)
           ========================================================================= */}
       <div className="metrics-grid">
-        {/* Card 1: Total Items */}
+        {/* Card 1: Checklist Progress */}
         <div className="metric-card">
           <div className="metric-card-top">
-            <span className="metric-label">Total Items</span>
-            <SlidersIcon width={16} height={16} className="metric-icon-muted" />
-          </div>
-          <div className="metric-value">{totalItems}</div>
-          <div className="metric-subtext">Across all synced cards</div>
-        </div>
-
-        {/* Card 2: Completion Rate */}
-        <div className="metric-card">
-          <div className="metric-card-top">
-            <span className="metric-label">Completion Rate</span>
-            <CheckCircleIcon width={17} height={17} className="metric-icon-green" />
+            <span className="metric-label">Checklist Progress</span>
+            <span className="metric-badge green">{completionPercent}%</span>
           </div>
           <div className="metric-value-row">
-            <span className="metric-value">{completionPercent}%</span>
-            <span className="metric-count">({completedCount}/{totalItems})</span>
+            <span className="metric-value">{completedCount}</span>
+            <span className="metric-count">of {totalItems} completed</span>
           </div>
           <div className="metric-progress-track">
             <div
@@ -374,36 +365,55 @@ export default function ChecklistDashboard({ t }) {
               style={{ width: `${completionPercent}%` }}
             />
           </div>
+          <div className="metric-subtext">Across {INITIAL_BOARDS.length} synced boards</div>
         </div>
 
-        {/* Card 3: Pending Tasks */}
+        {/* Card 2: Tasks To Do */}
         <div className="metric-card">
           <div className="metric-card-top">
-            <span className="metric-label">Pending Tasks</span>
-            <ClockIcon width={16} height={16} className="metric-icon-blue" />
+            <span className="metric-label">Tasks To Do</span>
+            <span className="metric-badge blue">Active</span>
           </div>
-          <div className="metric-value">{pendingCount}</div>
-          <div className="metric-subtext">Require action</div>
+          <div className="metric-value-row">
+            <span className="metric-value">{pendingCount}</span>
+            <span className="metric-count">pending tasks</span>
+          </div>
+          <div className="metric-subtext" style={{ marginTop: "10px" }}>
+            Require action before milestone
+          </div>
         </div>
 
-        {/* Card 4: Overdue */}
-        <div className="metric-card card-overdue">
+        {/* Card 3: Deadlines & Alerts */}
+        <div className="metric-card card-alerts">
           <div className="metric-card-top">
-            <span className="metric-label red">Overdue</span>
-            <AlertTriangleIcon width={16} height={16} className="metric-icon-red" />
+            <span className="metric-label">Deadlines &amp; Alerts</span>
+            {overdueCount > 0 ? (
+              <span className="metric-badge red">Urgent</span>
+            ) : (
+              <span className="metric-badge green">All Clear</span>
+            )}
           </div>
-          <div className="metric-value red">{overdueCount}</div>
-          <div className="metric-subtext red">Past deadline</div>
-        </div>
-
-        {/* Card 5: Due Today */}
-        <div className="metric-card card-due-today">
-          <div className="metric-card-top">
-            <span className="metric-label amber">Due Today</span>
-            <CalendarIcon width={16} height={16} className="metric-icon-amber" />
+          <div className="metric-alerts-row">
+            <div
+              className="alert-pill overdue-pill"
+              onClick={() => { setStatusFilter("OVERDUE"); setDueFilter("ALL"); }}
+              title="Filter to overdue tasks"
+            >
+              <AlertTriangleIcon width={14} height={14} />
+              <span className="alert-num">{overdueCount}</span>
+              <span className="alert-text">Overdue</span>
+            </div>
+            <div
+              className="alert-pill today-pill"
+              onClick={() => { setStatusFilter("ALL"); setDueFilter("TODAY"); }}
+              title="Filter to tasks due today"
+            >
+              <CalendarIcon width={14} height={14} />
+              <span className="alert-num">{dueTodayCount}</span>
+              <span className="alert-text">Due Today</span>
+            </div>
           </div>
-          <div className="metric-value amber">{dueTodayCount}</div>
-          <div className="metric-subtext amber">Needs attention today</div>
+          <div className="metric-subtext">Click pill to filter tasks</div>
         </div>
       </div>
 
@@ -578,16 +588,14 @@ export default function ChecklistDashboard({ t }) {
                   onChange={() => toggleSelectAll(filteredItems)}
                 />
               </th>
-              <th className="th-item">CHECKLIST ITEM</th>
-              <th className="th-card">PARENT CARD</th>
-              <th className="th-board">BOARD</th>
+              <th className="th-item">CHECKLIST TASK</th>
+              <th className="th-card">CARD &amp; BOARD</th>
               <th className="th-assignee">ASSIGNEE</th>
               <th className="th-due">
                 <span className="th-sortable" onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}>
                   DUE DATE {sortOrder === 'asc' ? '↑' : '↓'}
                 </span>
               </th>
-              <th className="th-actions">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
@@ -641,7 +649,7 @@ export default function ChecklistDashboard({ t }) {
                           {item.title}
                         </div>
                         <div className="item-meta-line">
-                          <span>Checklist: {item.checklistName}</span>
+                          <span>{item.checklistName}</span>
                           <span className="dot-divider">·</span>
                           <span className={`priority-tag ${priorityClass}`}>
                             {item.priority}
@@ -651,27 +659,16 @@ export default function ChecklistDashboard({ t }) {
                     </div>
                   </td>
 
-                  {/* Parent Card */}
+                  {/* Parent Card & Board */}
                   <td className="td-card">
                     <div className="parent-card-name" title={item.parentCardFull}>
                       {item.parentCard}
                     </div>
-                    <div className="parent-card-list">
-                      List: {item.listName}
-                    </div>
-                  </td>
-
-                  {/* Board */}
-                  <td className="td-board">
-                    <div className="board-badge-wrapper">
-                      <span
-                        className="board-dot"
-                        style={{ background: board?.color || "#10b981" }}
-                      />
-                      <span className="board-icon">
-                        {renderBoardIcon(board?.icon)}
-                      </span>
-                      <span className="board-title" title={board?.name}>
+                    <div className="card-board-subline">
+                      <span>{item.listName}</span>
+                      <span className="dot-divider">·</span>
+                      <span className="board-pill-tag">
+                        <span className="board-dot" style={{ background: board?.color || "#10b981" }} />
                         {board?.shortName || board?.name}
                       </span>
                     </div>
@@ -698,49 +695,24 @@ export default function ChecklistDashboard({ t }) {
                   <td className="td-due">
                     {item.state === "incomplete" && item.isOverdue ? (
                       <div className="due-status overdue-danger">
-                        <AlertCircleIcon width={14} height={14} />
-                        <span>{item.dueDate} (Overdue)</span>
+                        <AlertCircleIcon width={13} height={13} />
+                        <span>{item.dueDate}</span>
                       </div>
                     ) : item.state === "incomplete" && item.isDueToday ? (
                       <div className="due-status due-today-amber">
-                        <CalendarIcon width={14} height={14} />
-                        <span>{item.dueDate} (Today)</span>
+                        <CalendarIcon width={13} height={13} />
+                        <span>Today</span>
                       </div>
                     ) : item.state === "complete" ? (
                       <div className="due-status completed-muted">
-                        <CalendarIcon width={14} height={14} />
-                        <span>{item.dueDate} ({item.dueStatus})</span>
+                        <CheckIcon width={13} height={13} />
+                        <span>Done</span>
                       </div>
                     ) : (
                       <div className="due-status upcoming-normal">
-                        <CalendarIcon width={14} height={14} />
                         <span>{item.dueDate}</span>
                       </div>
                     )}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="td-actions">
-                    <div className="actions-cell">
-                      <button
-                        type="button"
-                        className="btn-action-icon"
-                        title="Preview Task Details"
-                        onClick={() => setPreviewItem(item)}
-                      >
-                        <EyeIcon width={15} height={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-action-icon"
-                        title="More options"
-                        onClick={() => {
-                          showToast(`Opened actions for "${item.title.slice(0, 20)}..."`);
-                        }}
-                      >
-                        <MoreHorizontalIcon width={16} height={16} />
-                      </button>
-                    </div>
                   </td>
                 </tr>
               );
@@ -748,7 +720,7 @@ export default function ChecklistDashboard({ t }) {
 
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan={7} className="td-empty">
+                <td colSpan={5} className="td-empty">
                   <div className="empty-state-box" style={{ padding: "40px 16px", textAlign: "center" }}>
                     <SlidersIcon width={28} height={28} style={{ color: "var(--dash-text-subtle)", margin: "0 auto 8px" }} />
                     <p style={{ margin: 0, fontWeight: 600, color: "var(--dash-text-dark)", fontSize: "13px" }}>
