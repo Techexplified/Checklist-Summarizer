@@ -1202,6 +1202,29 @@ body {
   border-color: #fde68a;
 }
 
+.data-status-loading {
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+/* Inline link-style button inside status bars */
+.status-bar-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.status-bar-link-btn:hover {
+  opacity: 0.75;
+}
+
 /* ── Refresh button loading state ──────────────────────────────── */
 .btn-icon-square.btn-loading {
   opacity: 0.65;

@@ -84,23 +84,26 @@ export default function ChecklistDashboard({ t }) {
   }
 
   // ── Live Trello data loader ──────────────────────────────────────────────
+  const [needsAuth, setNeedsAuth] = useState(false);
+
   const loadRealData = useCallback(async () => {
     if (!t) return;
+    setIsLoading(true);
+    setNeedsAuth(false);
     try {
-      const authed = await isAuthorized(t).catch(() => false);
-      if (!authed) return; // stay on mock data
-
-      setIsLoading(true);
-
-      // 1. Get board id
+      // 1. Get board id via Power-Up client (always works — no token needed)
       const board = await t.board("id", "name").catch(() => null);
-      if (!board || !board.id) return;
+      if (!board || !board.id) {
+        setIsLoading(false);
+        return;
+      }
 
       // 2. Fetch cards (with checklists), lists, and members in parallel
+      //    These REST calls require an OAuth token — they'll throw NOT_AUTHORIZED if missing
       const [rawCards, rawLists, rawMembers] = await Promise.all([
-        getBoardCardsWithChecklists(t, board.id).catch(() => []),
-        getBoardLists(t, board.id).catch(() => []),
-        getBoardMembers(t, board.id).catch(() => []),
+        getBoardCardsWithChecklists(t, board.id),
+        getBoardLists(t, board.id),
+        getBoardMembers(t, board.id),
       ]);
 
       // Build lookup maps
@@ -131,8 +134,6 @@ export default function ChecklistDashboard({ t }) {
       // Flatten all checklist items across all cards
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
 
       const flatItems = [];
       for (const card of rawCards) {
@@ -161,25 +162,21 @@ export default function ChecklistDashboard({ t }) {
               } else {
                 dueStatus = "Completed";
               }
-            } else {
-              // No due date — infer from card due
-              if (card.due) {
-                const cardDue = new Date(card.due);
-                dueDateLabel = cardDue.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                if (!isComplete) {
-                  const cardDueDay = new Date(cardDue.getFullYear(), cardDue.getMonth(), cardDue.getDate());
-                  isOverdue = cardDueDay < today;
-                  isDueToday = cardDueDay.getTime() === today.getTime();
-                  dueStatus = isOverdue ? "Overdue" : isDueToday ? "Today" : "Upcoming";
-                } else {
-                  dueStatus = "Completed";
-                }
+            } else if (card.due) {
+              const cardDue = new Date(card.due);
+              dueDateLabel = cardDue.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              if (!isComplete) {
+                const cardDueDay = new Date(cardDue.getFullYear(), cardDue.getMonth(), cardDue.getDate());
+                isOverdue = cardDueDay < today;
+                isDueToday = cardDueDay.getTime() === today.getTime();
+                dueStatus = isOverdue ? "Overdue" : isDueToday ? "Today" : "Upcoming";
               } else {
-                dueDateLabel = "No due date";
+                dueStatus = "Completed";
               }
+            } else {
+              dueDateLabel = "No due date";
             }
 
-            // Assignee: use item-level member if set, otherwise first card member
             const memberId = ci.idMember || (card.idMembers && card.idMembers[0]) || null;
 
             flatItems.push({
@@ -189,7 +186,7 @@ export default function ChecklistDashboard({ t }) {
               _rawCheckItemId: ci.id,
               title: ci.name,
               checklistName: cl.name,
-              priority: "MEDIUM", // Trello has no native priority field
+              priority: "MEDIUM",
               parentCard: cardShort,
               parentCardFull: cardName,
               listName,
@@ -207,13 +204,19 @@ export default function ChecklistDashboard({ t }) {
 
       setLiveBoards(liveBoardList);
       setLiveAssignees(Object.values(memberMap));
-      setItems(flatItems.length > 0 ? flatItems : INITIAL_CHECKLIST_ITEMS);
-      setIsLive(flatItems.length > 0);
+      setItems(flatItems.length > 0 ? flatItems : []);
+      setIsLive(true);
       if (flatItems.length > 0) {
         showToast(`Loaded ${flatItems.length} checklist items from Trello`);
       }
     } catch (err) {
       console.error("loadRealData failed:", err);
+      if (err?.message === "NOT_AUTHORIZED" || String(err?.message).includes("NOT_AUTHORIZED")) {
+        // Token missing — prompt user to connect via Settings
+        setNeedsAuth(true);
+      } else {
+        showToast("Failed to load Trello data. Check console for details.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -526,14 +529,31 @@ export default function ChecklistDashboard({ t }) {
         </div>
       </header>
 
-      {/* Live / Mock data status bar */}
-      {t && !isLoading && !isLive && (
-        <div className="data-status-bar data-status-mock">
-          <AlertCircleIcon width={13} height={13} />
-          <span>Showing sample data. Click <strong>Refresh</strong> to load live Trello data (requires authorization).</span>
+      {/* ── Status banners ─────────────────────────────────────────────────── */}
+      {isLoading && (
+        <div className="data-status-bar data-status-loading">
+          <span className="spin-icon"><RefreshCwIcon width={13} height={13} /></span>
+          <span>Loading live data from your Trello board&hellip;</span>
         </div>
       )}
-      {isLive && (
+
+      {!isLoading && needsAuth && (
+        <div className="data-status-bar data-status-mock">
+          <AlertCircleIcon width={13} height={13} />
+          <span>
+            Authorization required.{" "}
+            <button
+              className="status-bar-link-btn"
+              onClick={() => setIsSettingsOpen(true)}
+            >
+              Open Settings to connect your Trello account
+            </button>
+            , then click the refresh button.
+          </span>
+        </div>
+      )}
+
+      {!isLoading && !needsAuth && isLive && (
         <div className="data-status-bar data-status-live">
           <CheckCircleIcon width={13} height={13} />
           <span>Live data from Trello &mdash; {items.length} checklist item{items.length !== 1 ? "s" : ""} loaded</span>
