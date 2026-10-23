@@ -113,6 +113,7 @@ export default function ChecklistDashboard({ t }) {
         // Status filter
         if (statusFilter === "INCOMPLETE" && item.state !== "incomplete") return false;
         if (statusFilter === "COMPLETED" && item.state !== "complete") return false;
+        if (statusFilter === "OVERDUE" && (!item.isOverdue || item.state === "complete")) return false;
 
         // Board filter
         if (boardFilter !== "ALL" && item.boardId !== boardFilter) return false;
@@ -407,6 +408,7 @@ export default function ChecklistDashboard({ t }) {
       </div>
 
       {/* =========================================================================
+      {/* =========================================================================
           FILTER & CONTROL BAR
           ========================================================================= */}
       <div className="controls-card">
@@ -414,7 +416,7 @@ export default function ChecklistDashboard({ t }) {
         <div className="controls-top-row">
           {/* Search Input */}
           <div className="search-box-wrapper">
-            <SearchIcon width={15} height={15} className="search-icon" />
+            <SearchIcon width={14} height={14} className="search-icon" />
             <input
               type="text"
               className="search-input"
@@ -429,76 +431,32 @@ export default function ChecklistDashboard({ t }) {
             <button
               type="button"
               className={`segmented-btn ${statusFilter === "ALL" ? "active" : ""}`}
-              onClick={() => setStatusFilter("ALL")}
+              onClick={() => { setStatusFilter("ALL"); setDueFilter("ALL"); }}
             >
-              All Status
+              All ({totalItems})
             </button>
             <button
               type="button"
               className={`segmented-btn ${statusFilter === "INCOMPLETE" ? "active" : ""}`}
-              onClick={() => setStatusFilter("INCOMPLETE")}
+              onClick={() => { setStatusFilter("INCOMPLETE"); setDueFilter("ALL"); }}
             >
-              Incomplete
+              Incomplete ({pendingCount})
             </button>
             <button
               type="button"
               className={`segmented-btn ${statusFilter === "COMPLETED" ? "active" : ""}`}
-              onClick={() => setStatusFilter("COMPLETED")}
+              onClick={() => { setStatusFilter("COMPLETED"); setDueFilter("ALL"); }}
             >
-              Completed
+              Completed ({completedCount})
+            </button>
+            <button
+              type="button"
+              className={`segmented-btn ${statusFilter === "OVERDUE" ? "active" : ""}`}
+              onClick={() => { setStatusFilter("OVERDUE"); setDueFilter("ALL"); }}
+            >
+              Overdue ({overdueCount})
             </button>
           </div>
-
-          {/* Group Dropdown */}
-          <div className="dropdown-control-wrapper">
-            <LayersIcon width={15} height={15} style={{ color: "#64748b" }} />
-            <select
-              className="custom-select"
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value)}
-            >
-              <option value="none">Group: None (Flat Table)</option>
-              <option value="board">Group: By Board</option>
-              <option value="priority">Group: By Priority</option>
-            </select>
-            <ChevronDownIcon width={12} height={12} className="select-chevron" />
-          </div>
-
-          {/* Sort Dropdown */}
-          <div className="dropdown-control-wrapper">
-            <ArrowUpDownIcon width={15} height={15} style={{ color: "#64748b" }} />
-            <select
-              className="custom-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="dueDate">Sort: Due Date</option>
-              <option value="title">Sort: Checklist Item</option>
-              <option value="priority">Sort: Priority</option>
-              <option value="assignee">Sort: Assignee</option>
-            </select>
-            <ChevronDownIcon width={12} height={12} className="select-chevron" />
-          </div>
-
-          {/* Asc / Desc Button */}
-          <button
-            type="button"
-            className="btn-sort-dir"
-            onClick={() => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))}
-            title="Toggle sort direction"
-          >
-            {sortOrder === "asc" ? (
-              <>
-                <ArrowUpIcon width={13} height={13} />
-                <span>Asc</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownIcon width={13} height={13} />
-                <span>Desc</span>
-              </>
-            )}
-          </button>
         </div>
 
         {/* Bottom Sub-filters Row */}
@@ -520,13 +478,13 @@ export default function ChecklistDashboard({ t }) {
                     </option>
                   ))}
                 </select>
-                <ChevronDownIcon width={11} height={11} className="sub-filter-chevron" />
+                <ChevronDownIcon width={10} height={10} className="sub-filter-chevron" />
               </div>
             </div>
 
             {/* Assignee Filter */}
             <div className="inline-filter-item">
-              <UserIcon width={14} height={14} className="filter-item-icon" />
+              <UserIcon width={13} height={13} className="filter-item-icon" />
               <span className="filter-item-label">Assignee:</span>
               <div className="inline-select-container">
                 <select
@@ -541,13 +499,13 @@ export default function ChecklistDashboard({ t }) {
                     </option>
                   ))}
                 </select>
-                <ChevronDownIcon width={11} height={11} className="sub-filter-chevron" />
+                <ChevronDownIcon width={10} height={10} className="sub-filter-chevron" />
               </div>
             </div>
 
             {/* Due Date Filter */}
             <div className="inline-filter-item">
-              <CalendarIcon width={14} height={14} className="filter-item-icon" />
+              <CalendarIcon width={13} height={13} className="filter-item-icon" />
               <span className="filter-item-label">Due:</span>
               <div className="inline-select-container">
                 <select
@@ -560,8 +518,40 @@ export default function ChecklistDashboard({ t }) {
                   <option value="TODAY">Due Today</option>
                   <option value="UPCOMING">Upcoming</option>
                 </select>
-                <ChevronDownIcon width={11} height={11} className="sub-filter-chevron" />
+                <ChevronDownIcon width={10} height={10} className="sub-filter-chevron" />
               </div>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="inline-filter-item">
+              <span className="filter-item-label">Sort:</span>
+              <div className="inline-select-container">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sub-filter-select"
+                >
+                  <option value="dueDate">Due Date</option>
+                  <option value="title">Checklist Item</option>
+                  <option value="priority">Priority</option>
+                  <option value="assignee">Assignee</option>
+                </select>
+                <ChevronDownIcon width={10} height={10} className="sub-filter-chevron" />
+              </div>
+
+              <button
+                type="button"
+                className="btn-sort-dir"
+                onClick={() => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))}
+                title="Toggle sort direction"
+                style={{ background: "transparent", border: "none", color: "var(--dash-text-muted)", cursor: "pointer", display: "inline-flex", alignItems: "center", padding: "2px 4px" }}
+              >
+                {sortOrder === "asc" ? (
+                  <ArrowUpIcon width={12} height={12} />
+                ) : (
+                  <ArrowDownIcon width={12} height={12} />
+                )}
+              </button>
             </div>
           </div>
 
@@ -759,13 +749,13 @@ export default function ChecklistDashboard({ t }) {
             {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="td-empty">
-                  <div className="empty-state-box">
-                    <SlidersIcon width={32} height={32} style={{ color: "#94a3b8", margin: "0 auto 10px" }} />
-                    <p style={{ margin: 0, fontWeight: 600, color: "#334155", fontSize: "14px" }}>
+                  <div className="empty-state-box" style={{ padding: "40px 16px", textAlign: "center" }}>
+                    <SlidersIcon width={28} height={28} style={{ color: "var(--dash-text-subtle)", margin: "0 auto 8px" }} />
+                    <p style={{ margin: 0, fontWeight: 600, color: "var(--dash-text-dark)", fontSize: "13px" }}>
                       No checklist tasks found
                     </p>
-                    <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: "12px" }}>
-                      Try clearing your search query or adjusting your status filters.
+                    <p style={{ margin: "4px 0 0", color: "var(--dash-text-muted)", fontSize: "11.5px" }}>
+                      Try clearing your search query or adjusting your filters.
                     </p>
                   </div>
                 </td>
@@ -774,6 +764,51 @@ export default function ChecklistDashboard({ t }) {
           </tbody>
         </table>
       </div>
+
+      {/* =========================================================================
+          FOOTER BAR
+          ========================================================================= */}
+      <footer className="dashboard-footer-bar">
+        <div className="footer-left">
+          {selectedItemIds.size > 0 ? (
+            <div className="selection-actions-bar">
+              <span className="selected-count-badge">{selectedItemIds.size} selected</span>
+              <button
+                type="button"
+                className="btn-batch-action"
+                onClick={() => {
+                  setItems((prev) =>
+                    prev.map((i) =>
+                      selectedItemIds.has(i.id) ? { ...i, state: "complete", dueStatus: "Completed" } : i
+                    )
+                  );
+                  setSelectedItemIds(new Set());
+                  showToast("Selected items marked complete!");
+                }}
+              >
+                Mark Complete
+              </button>
+              <button
+                type="button"
+                className="btn-batch-action secondary"
+                onClick={() => setSelectedItemIds(new Set())}
+              >
+                Deselect
+              </button>
+            </div>
+          ) : (
+            <span className="footer-tip">Tip: Click checkboxes to check off tasks in real-time</span>
+          )}
+        </div>
+        <div className="footer-right">
+          <span className="footer-brand">
+            Explified &bull;{" "}
+            <a href="mailto:support@explified.com" className="footer-email">
+              support@explified.com
+            </a>
+          </span>
+        </div>
+      </footer>
 
       {/* =========================================================================
           MODAL: ADD TASK
