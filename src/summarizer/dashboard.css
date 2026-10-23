@@ -536,6 +536,7 @@ body {
   border: 1px solid var(--dash-border);
   border-radius: var(--dash-radius);
   overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 

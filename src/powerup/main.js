@@ -54,7 +54,7 @@ TrelloPowerUp.initialize({
             url: "./summarizer.html?view=board",
             accentColor: "#0f172a",
             height: 720,
-            fullscreen: true,
+            fullscreen: false,
             title: "Board Checklists Overview",
           });
         },

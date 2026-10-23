@@ -32,43 +32,41 @@
       body {
         margin: 0;
         padding: 0;
-        background: var(--bg-color);
-        background-image: 
-          radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          radial-gradient(ellipse at 50% 0%, rgba(37, 99, 235, 0.12) 0%, transparent 60%);
-        background-size: 20px 20px, 100% 100%;
+        background: #080c14;
         color: var(--text);
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.5;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        overflow-x: hidden;
       }
 
-      header {
-        background: rgba(17, 24, 39, 0.85);
+      /* Dev Sandbox Header */
+      header.dev-header {
+        background: rgba(15, 21, 35, 0.95);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid var(--border);
-        padding: 14px 32px;
+        padding: 10px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         position: sticky;
         top: 0;
-        z-index: 50;
+        z-index: 100;
       }
 
       .logo-group {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
       }
 
       .logo-badge {
-        width: 38px;
-        height: 38px;
-        border-radius: 9px;
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(16, 185, 129, 0.2));
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(16, 185, 129, 0.25));
         border: 1px solid rgba(37, 99, 235, 0.4);
         display: flex;
         align-items: center;
@@ -77,7 +75,7 @@
 
       .logo-text h1 {
         font-family: "Outfit", sans-serif;
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 700;
         margin: 0;
         letter-spacing: -0.2px;
@@ -85,27 +83,27 @@
       }
 
       .logo-text p {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-subtle);
-        margin: 2px 0 0;
+        margin: 1px 0 0;
       }
 
       .top-nav {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
       }
 
       .nav-chip {
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 500;
-        padding: 6px 12px;
+        padding: 5px 10px;
         border-radius: 6px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--border);
         color: var(--text-subtle);
         text-decoration: none;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
       }
 
       .nav-chip:hover {
@@ -113,38 +111,36 @@
         color: var(--text);
       }
 
-      main {
-        width: 100%;
-        max-width: 1440px;
-        margin: 0 auto;
-        padding: 24px 24px 60px;
+      /* Control Toolbar */
+      .sandbox-toolbar {
+        background: #0f1523;
+        border-bottom: 1px solid var(--border);
+        padding: 10px 24px;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        flex: 1;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        z-index: 90;
       }
 
-      /* Centered Switcher Bar */
       .switcher-container {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 20px;
+        gap: 6px;
         flex-wrap: wrap;
-        width: 100%;
       }
 
       .view-pill {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
+        gap: 6px;
+        padding: 6px 13px;
         border-radius: 9999px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--border);
         color: var(--text-subtle);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -161,137 +157,404 @@
         border-color: var(--primary-blue);
         color: #ffffff;
         font-weight: 600;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
       }
 
-      /* Centered Iframe Wrapper */
-      .centered-frame-wrapper {
-        width: 100%;
-        max-width: 1400px;
-        background: var(--surface-card);
+      .toolbar-right-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .mode-toggle-group {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
         border: 1px solid var(--border);
-        border-radius: 14px;
-        overflow: hidden;
+        border-radius: 8px;
+        padding: 2px;
+      }
+
+      .mode-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-subtle);
+        font-size: 11.5px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .mode-btn.active {
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+      }
+
+      /* Trello Board Sandbox Canvas */
+      .trello-board-stage {
+        flex: 1;
+        position: relative;
+        min-height: calc(100vh - 170px);
+        background: linear-gradient(135deg, #2b1828 0%, #1e1728 50%, #151824 100%);
+        background-attachment: fixed;
         display: flex;
         flex-direction: column;
-        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
-        margin: 0 auto;
+        overflow: hidden;
       }
 
-      .preview-bar {
-        background: #0d1322;
-        border-bottom: 1px solid var(--border);
-        padding: 12px 20px;
+      /* Simulated Trello Board Top Bar */
+      .trello-topbar {
+        height: 48px;
+        background: rgba(18, 14, 26, 0.7);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 12px;
-        color: var(--text-subtle);
+        user-select: none;
       }
 
-      .preview-dots {
+      .trello-topbar-left {
         display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .board-title-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .board-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .board-star {
+        color: rgba(255, 255, 255, 0.4);
+        cursor: pointer;
+        font-size: 15px;
+      }
+
+      .powerup-launch-btn {
+        display: inline-flex;
+        align-items: center;
         gap: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #f1f5f9;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
       }
 
-      .dot {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
+      .powerup-launch-btn:hover {
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
       }
 
-      .dot.red { background: #ef4444; }
-      .dot.yellow { background: #f59e0b; }
-      .dot.green { background: #10b981; }
+      .powerup-launch-btn.open-state {
+        background: #2563eb;
+        border-color: #3b82f6;
+        color: #ffffff;
+      }
 
-      .preview-url-group {
+      /* Simulated Board Columns Background */
+      .board-columns-bg {
+        padding: 20px 24px;
+        display: flex;
+        gap: 18px;
+        overflow-x: auto;
+        flex: 1;
+        opacity: 0.85;
+      }
+
+      .mock-list {
+        width: 272px;
+        min-width: 272px;
+        background: #101204;
+        background: rgba(16, 18, 24, 0.85);
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        height: fit-content;
+      }
+
+      .mock-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 6px 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+
+      .mock-card {
+        background: #22272b;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .mock-card-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: #e2e8f0;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+
+      .mock-card-badges {
         display: flex;
         align-items: center;
         gap: 8px;
+        font-size: 11px;
+        color: #94a3b8;
       }
 
-      .preview-url {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 5px 18px;
-        border-radius: 9999px;
-        font-family: monospace;
-        font-size: 12px;
-        color: #93c5fd;
+      .mock-badge-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
       }
 
-      .preview-actions {
+      .mock-badge-chip.green {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+
+      .mock-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #1e3a8a;
+        color: #bfdbfe;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: auto;
+      }
+
+      /* Modal Backdrop Overlay (Dark dimmed background like in Trello) */
+      .modal-backdrop-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(3px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 20px;
+        z-index: 50;
+        transition: opacity 0.2s ease;
+      }
+
+      .modal-backdrop-overlay.hidden {
+        display: none;
+      }
+
+      /* Centered Trello Modal Window (Floats dead center like Cardlytics in screenshot) */
+      .trello-modal-window {
+        width: 940px;
+        max-width: 94vw;
+        height: 720px;
+        max-height: 86vh;
+        background: #1a1e27;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        position: relative;
+        animation: modalAppear 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.25s ease;
+      }
+
+      @keyframes modalAppear {
+        from {
+          opacity: 0;
+          transform: scale(0.96) translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      /* Fullscreen mode toggle on modal window */
+      .trello-modal-window.fullscreen-mode {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+      }
+
+      /* Modal Top Bar (Trello Power-Up Header) */
+      .trello-modal-header {
+        background: #151922;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 16px 10px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .modal-header-left {
         display: flex;
         align-items: center;
         gap: 12px;
       }
 
-      .preview-btn {
-        background: transparent;
-        border: none;
-        color: var(--text-subtle);
-        cursor: pointer;
-        font-size: 12px;
+      .modal-app-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: #2563eb;
         display: flex;
         align-items: center;
-        gap: 5px;
-        transition: color 0.15s;
+        justify-content: center;
+      }
+
+      .modal-app-icon img {
+        width: 16px;
+        height: 16px;
+      }
+
+      .modal-title {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #f1f5f9;
+        letter-spacing: -0.2px;
+      }
+
+      .modal-url-tag {
+        font-size: 11px;
+        color: #93c5fd;
+        background: rgba(37, 99, 235, 0.15);
+        border: 1px solid rgba(37, 99, 235, 0.3);
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-family: monospace;
+      }
+
+      .modal-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .modal-action-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        padding: 5px 8px;
+        font-size: 11.5px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         text-decoration: none;
+        transition: all 0.15s ease;
       }
 
-      .preview-btn:hover {
-        color: var(--text);
+      .modal-action-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
       }
 
-      iframe {
+      /* Trello Circular Close Button (Exactly like in the screenshot top right) */
+      .trello-close-circle {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        transition: all 0.15s ease;
+        margin-left: 6px;
+      }
+
+      .trello-close-circle:hover {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #f87171;
+        transform: scale(1.05);
+      }
+
+      /* Iframe inside the centered modal */
+      iframe#previewFrame {
         width: 100%;
-        height: 860px;
+        height: 100%;
         border: none;
         background: #f8fafc;
         display: block;
+        flex: 1;
       }
 
-      /* Bottom Integration Banner */
+      /* Bottom Integration Strip */
       .bottom-info-strip {
-        margin-top: 24px;
-        width: 100%;
-        max-width: 1400px;
-        background: rgba(21, 29, 47, 0.6);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 12px 20px;
+        background: #0b0e17;
+        border-top: 1px solid var(--border);
+        padding: 10px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 12.5px;
+        font-size: 12px;
         color: var(--text-subtle);
         flex-wrap: wrap;
         gap: 12px;
       }
 
       .bottom-info-strip strong {
-        color: #ffffff;
+        color: #e2e8f0;
       }
 
       .bottom-info-strip code {
-        background: #090d16;
-        padding: 3px 8px;
+        background: #141a27;
+        padding: 2px 8px;
         border-radius: 4px;
         color: var(--primary-sky);
         font-family: monospace;
-        font-size: 12px;
+        font-size: 11.5px;
       }
     </style>
   </head>
   <body>
-    <header>
+    <!-- Top Dev Sandbox Header -->
+    <header class="dev-header">
       <div class="logo-group">
         <div class="logo-badge">
-          <img src="./icons/icon.svg" width="22" height="22" alt="Checklist Summarizer Logo" />
+          <img src="./icons/icon.svg" width="20" height="20" alt="Checklist Summarizer Logo" />
         </div>
         <div class="logo-text">
           <h1>Checklist Summarizer Power-Up</h1>
-          <p>Centralized Checklist Manager &amp; Task Aggregator</p>
+          <p>Local Development &amp; Trello Capability Sandbox</p>
         </div>
       </div>
       <div class="top-nav">
@@ -302,106 +565,306 @@
       </div>
     </header>
 
-    <main>
-      <!-- Centered View Switcher -->
+    <!-- Toolbar: View Switcher & Modal Presentation Controls -->
+    <div class="sandbox-toolbar">
       <div class="switcher-container">
         <button
           type="button"
           class="view-pill active"
-          onclick="switchView('./summarizer.html', this)"
+          onclick="switchView('./summarizer.html', this, 'dashboard', 'Board Checklists Overview')"
         >
-          <span>📊 Checklist Summary Dashboard</span>
+          <span>📊 Board Overview (Dashboard)</span>
         </button>
         <button
           type="button"
           class="view-pill"
-          onclick="switchView('./summarizer.html?view=card-back-section', this)"
+          onclick="switchView('./summarizer.html?view=card-back-section', this, 'card-back', 'Card Back Summary Section')"
         >
           <span>📋 Card Back Widget</span>
         </button>
         <button
           type="button"
           class="view-pill"
-          onclick="switchView('./summarizer.html?view=single-card', this)"
+          onclick="switchView('./summarizer.html?view=single-card', this, 'card-modal', 'Single Card Breakdown')"
         >
           <span>🔍 Single Card Breakdown</span>
         </button>
         <button
           type="button"
           class="view-pill"
-          onclick="switchView('./auth.html', this)"
+          onclick="switchView('./auth.html', this, 'popup-auth', 'Authorize Checklist Summarizer')"
         >
           <span>🔐 OAuth Auth Popup</span>
         </button>
         <button
           type="button"
           class="view-pill"
-          onclick="switchView('./settings.html', this)"
+          onclick="switchView('./settings.html', this, 'popup-settings', 'Checklist Summarizer Settings')"
         >
           <span>⚙️ Settings Popup</span>
         </button>
         <button
           type="button"
           class="view-pill"
-          onclick="switchView('./powerup.html', this)"
+          onclick="switchView('./powerup.html', this, 'connector', 'Power-Up Connector Iframe')"
         >
           <span>⚡ Connector Iframe</span>
         </button>
       </div>
 
-      <!-- Centered Iframe Sandbox -->
-      <div class="centered-frame-wrapper">
-        <div class="preview-bar">
-          <div class="preview-dots">
-            <span class="dot red"></span>
-            <span class="dot yellow"></span>
-            <span class="dot green"></span>
-          </div>
-          <div class="preview-url-group">
-            <span class="preview-url" id="previewUrlLabel">./summarizer.html</span>
-          </div>
-          <div class="preview-actions">
-            <button
-              type="button"
-              class="preview-btn"
-              onclick="document.getElementById('previewFrame').src = document.getElementById('previewFrame').src"
-            >
-              ↻ Reload
-            </button>
-            <a
-              id="openExternalLink"
-              href="./summarizer.html"
-              target="_blank"
-              class="preview-btn"
-            >
-              Open Tab ↗
-            </a>
-          </div>
+      <div class="toolbar-right-actions">
+        <div class="mode-toggle-group">
+          <button
+            type="button"
+            id="modeCenteredBtn"
+            class="mode-btn active"
+            onclick="setPresentationMode('centered')"
+            title="Centered floating modal over Trello backdrop (like Cardlytics)"
+          >
+            Centered Modal
+          </button>
+          <button
+            type="button"
+            id="modeFullscreenBtn"
+            class="mode-btn"
+            onclick="setPresentationMode('fullscreen')"
+            title="Stretch to full stage width"
+          >
+            Expanded
+          </button>
         </div>
-        <iframe id="previewFrame" src="./summarizer.html"></iframe>
+      </div>
+    </div>
+
+    <!-- Trello Stage: Authentic Board Canvas with Dimmed Modal Overlay -->
+    <main class="trello-board-stage">
+      <!-- Simulated Board Header -->
+      <div class="trello-topbar">
+        <div class="trello-topbar-left">
+          <div class="board-title-group">
+            <span class="board-title">My Trello board</span>
+            <span class="board-star">★</span>
+          </div>
+          <button
+            type="button"
+            class="powerup-launch-btn open-state"
+            id="powerupHeaderBtn"
+            onclick="toggleModal(true)"
+          >
+            <img src="./icons/icon.svg" width="14" height="14" alt="" />
+            <span>Checklists Overview</span>
+          </button>
+        </div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">
+          Simulated Trello Board Environment
+        </div>
       </div>
 
-      <!-- Centered Trello Setup strip -->
-      <div class="bottom-info-strip">
-        <div>
-          <strong>Trello Connector URL:</strong>
-          <code>https://checklist-summarizer.vercel.app/powerup.html</code>
+      <!-- Simulated Board Lists in Background (visible behind overlay) -->
+      <div class="board-columns-bg">
+        <div class="mock-list">
+          <div class="mock-list-header">
+            <span>Trello Starter Guide</span>
+            <span>•••</span>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-title">✔ Add Notification System</div>
+            <div class="mock-card-badges">
+              <span class="mock-badge-chip green">✓ Jul 24</span>
+              <span class="mock-badge-chip">💬 2</span>
+              <span class="mock-avatar">SB</span>
+            </div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-title">Automated SOC-2 evidence collector continuously generating audit reports</div>
+            <div class="mock-card-badges">
+              <span class="mock-badge-chip">📎 1</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <strong>OAuth Callback URL:</strong>
-          <code>https://checklist-summarizer.vercel.app/authorized.html</code>
+
+        <div class="mock-list">
+          <div class="mock-list-header">
+            <span>In Progress</span>
+            <span>•••</span>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-title">Setup CI/CD pipeline &amp; automated test coverage reporting</div>
+            <div class="mock-card-badges">
+              <span class="mock-badge-chip">📋 4/8</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-list">
+          <div class="mock-list-header">
+            <span>Completed Checklists</span>
+            <span>•••</span>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-title">Quarterly security review checklist</div>
+            <div class="mock-card-badges">
+              <span class="mock-badge-chip green">✓ 10/10</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="min-width: 240px; color: rgba(255,255,255,0.4); padding: 12px; font-size: 13px;">
+          + Add another list
+        </div>
+      </div>
+
+      <!-- Darkened Modal Backdrop Overlay -->
+      <div class="modal-backdrop-overlay" id="modalBackdrop" onclick="handleBackdropClick(event)">
+        <!-- Centered Trello Modal Window (Exactly centered like in Trello) -->
+        <div class="trello-modal-window" id="modalWindow">
+          <!-- Trello Modal Header -->
+          <div class="trello-modal-header">
+            <div class="modal-header-left">
+              <div class="modal-app-icon">
+                <img src="./icons/icon.svg" alt="App Icon" />
+              </div>
+              <span class="modal-title" id="modalTitleLabel">Board Checklists Overview</span>
+              <span class="modal-url-tag" id="previewUrlLabel">./summarizer.html</span>
+            </div>
+
+            <div class="modal-header-actions">
+              <button
+                type="button"
+                class="modal-action-btn"
+                onclick="reloadIframe()"
+                title="Reload iframe content"
+              >
+                ↻ Reload
+              </button>
+              <a
+                id="openExternalLink"
+                href="./summarizer.html"
+                target="_blank"
+                class="modal-action-btn"
+                title="Open in new window"
+              >
+                Open Tab ↗
+              </a>
+              <!-- Circular Close Button mimicking Trello's close button -->
+              <button
+                type="button"
+                class="trello-close-circle"
+                onclick="toggleModal(false)"
+                title="Close modal (reopen from board header)"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Embedded Iframe -->
+          <iframe id="previewFrame" src="./summarizer.html"></iframe>
         </div>
       </div>
     </main>
 
+    <!-- Bottom Registration Strip -->
+    <div class="bottom-info-strip">
+      <div>
+        <strong>Trello Connector URL:</strong>
+        <code>https://checklist-summarizer.vercel.app/powerup.html</code>
+      </div>
+      <div>
+        <strong>OAuth Callback URL:</strong>
+        <code>https://checklist-summarizer.vercel.app/authorized.html</code>
+      </div>
+    </div>
+
     <script>
-      function switchView(url, btn) {
-        document.getElementById("previewFrame").src = url;
-        document.getElementById("previewUrlLabel").textContent = url;
-        document.getElementById("openExternalLink").href = url;
+      const MODAL_SIZES = {
+        'dashboard': { width: '940px', height: '720px' },
+        'card-modal': { width: '820px', height: '680px' },
+        'card-back': { width: '600px', height: '520px' },
+        'popup-auth': { width: '460px', height: '390px' },
+        'popup-settings': { width: '440px', height: '360px' },
+        'connector': { width: '520px', height: '320px' },
+      };
+
+      let currentSizeKey = 'dashboard';
+      let currentMode = 'centered';
+
+      function switchView(url, btn, sizeKey, title) {
+        const frame = document.getElementById("previewFrame");
+        const urlLabel = document.getElementById("previewUrlLabel");
+        const titleLabel = document.getElementById("modalTitleLabel");
+        const openLink = document.getElementById("openExternalLink");
+
+        frame.src = url;
+        urlLabel.textContent = url;
+        if (title) titleLabel.textContent = title;
+        openLink.href = url;
+
         document.querySelectorAll(".view-pill").forEach((b) => b.classList.remove("active"));
         if (btn) btn.classList.add("active");
+
+        if (sizeKey) {
+          currentSizeKey = sizeKey;
+          applyModalDimensions();
+        }
+
+        // Ensure modal is visible
+        toggleModal(true);
       }
+
+      function applyModalDimensions() {
+        if (currentMode === 'fullscreen') return;
+        const modal = document.getElementById("modalWindow");
+        const size = MODAL_SIZES[currentSizeKey] || MODAL_SIZES['dashboard'];
+        modal.style.width = size.width;
+        modal.style.height = size.height;
+      }
+
+      function setPresentationMode(mode) {
+        currentMode = mode;
+        const modal = document.getElementById("modalWindow");
+        const btnCentered = document.getElementById("modeCenteredBtn");
+        const btnFullscreen = document.getElementById("modeFullscreenBtn");
+
+        if (mode === 'fullscreen') {
+          modal.classList.add("fullscreen-mode");
+          btnFullscreen.classList.add("active");
+          btnCentered.classList.remove("active");
+        } else {
+          modal.classList.remove("fullscreen-mode");
+          btnCentered.classList.add("active");
+          btnFullscreen.classList.remove("active");
+          applyModalDimensions();
+        }
+      }
+
+      function toggleModal(open) {
+        const backdrop = document.getElementById("modalBackdrop");
+        const launchBtn = document.getElementById("powerupHeaderBtn");
+
+        if (open) {
+          backdrop.classList.remove("hidden");
+          launchBtn.classList.add("open-state");
+        } else {
+          backdrop.classList.add("hidden");
+          launchBtn.classList.remove("open-state");
+        }
+      }
+
+      function handleBackdropClick(event) {
+        // If clicking directly on the backdrop (not inside modal window), close it
+        if (event.target === document.getElementById("modalBackdrop")) {
+          toggleModal(false);
+        }
+      }
+
+      function reloadIframe() {
+        const frame = document.getElementById("previewFrame");
+        frame.src = frame.src;
+      }
+
+      // Initial dimension setup
+      applyModalDimensions();
     </script>
   </body>
 </html>
