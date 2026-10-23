@@ -1,0 +1,15 @@
+{
+  "short_name": "Checklists",
+  "name": "Checklist Summarizer Power-Up",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "64x64 128x128 256x256"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0b0f19",
+  "theme_color": "#10b981",
+  "display": "standalone"
+}

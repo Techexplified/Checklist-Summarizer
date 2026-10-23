@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connecting Checklist Summarizer to Trello…</title>
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --card-bg: #151d2f;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --primary-emerald: #10b981;
+        --primary-sky: #38bdf8;
+        --primary-indigo: #6366f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 20px;
+        background: var(--bg);
+        background-image: 
+          radial-gradient(circle at 50% 25%, rgba(16, 185, 129, 0.15) 0%, transparent 65%),
+          radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.1) 0%, transparent 55%);
+        color: var(--text);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 90vh;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 40px 32px;
+        max-width: 400px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(14px);
+      }
+
+      .logo-icon {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 22px;
+        filter: drop-shadow(0 4px 14px rgba(16, 185, 129, 0.4));
+      }
+
+      .spinner-wrapper {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 20px;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 3px solid rgba(16, 185, 129, 0.2);
+        border-top-color: var(--primary-emerald);
+        border-right-color: var(--primary-sky);
+        border-radius: 50%;
+        animation: spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.9) infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .title {
+        font-family: "Outfit", sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 8px;
+        letter-spacing: -0.3px;
+        color: #f8fafc;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0;
+        line-height: 1.5;
+        max-width: 320px;
+      }
+
+      .status-pill {
+        margin-top: 20px;
+        padding: 6px 16px;
+        border-radius: 9999px;
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary-emerald);
+        animation: pulse 1.4s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="./icons/icon.svg" alt="Checklist Summarizer Power-Up" class="logo-icon" />
+      <div class="spinner-wrapper" id="spinner-container">
+        <div class="spinner" id="spinner"></div>
+      </div>
+      <h2 class="title" id="status-title">Connecting Checklist Summarizer…</h2>
+      <p class="subtitle" id="status-desc">Finalizing your secure Trello OAuth credentials.</p>
+      <div class="status-pill" id="status-pill">
+        <span class="dot"></span>
+        <span>Secure Handshake</span>
+      </div>
+    </div>
+    <script src="./authorized.js"></script>
+  </body>
+</html>

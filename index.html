@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checklist Summarizer — Trello Power-Up Dev Sandbox</title>
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-color: #0b0f19;
+        --surface: #111827;
+        --surface-card: #151d2f;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-hover: rgba(255, 255, 255, 0.16);
+        --primary-emerald: #10b981;
+        --primary-sky: #38bdf8;
+        --text: #f8fafc;
+        --text-subtle: #94a3b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg-color);
+        background-image: 
+          radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 60%);
+        background-size: 20px 20px, 100% 100%;
+        color: var(--text);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.5;
+      }
+
+      header {
+        background: rgba(17, 24, 39, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .logo-group {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .logo-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(56, 189, 248, 0.15));
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logo-text h1 {
+        font-family: "Outfit", sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.2px;
+        color: #ffffff;
+      }
+
+      .logo-text p {
+        font-size: 12px;
+        color: var(--text-subtle);
+        margin: 2px 0 0;
+      }
+
+      .top-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nav-chip {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--text-subtle);
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+
+      .nav-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text);
+      }
+
+      .nav-chip.primary {
+        background: var(--primary-emerald);
+        border-color: var(--primary-emerald);
+        color: #ffffff;
+        font-weight: 600;
+      }
+
+      main {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 28px 32px 64px;
+      }
+
+      .sandbox-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .sandbox-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .view-selector-card {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .section-heading {
+        font-family: "Outfit", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-subtle);
+        margin: 0 0 12px;
+      }
+
+      .view-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        margin-bottom: 6px;
+      }
+
+      .view-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--border);
+      }
+
+      .view-btn.active {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+        color: var(--primary-emerald);
+        font-weight: 600;
+      }
+
+      .info-card {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--text-subtle);
+      }
+
+      .info-card strong {
+        color: var(--text);
+      }
+
+      .info-card code {
+        background: #090d16;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: var(--primary-sky);
+        font-family: monospace;
+      }
+
+      .preview-frame-wrapper {
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+      }
+
+      .preview-bar {
+        background: #0d1322;
+        border-bottom: 1px solid var(--border);
+        padding: 10px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-subtle);
+      }
+
+      .preview-dots {
+        display: flex;
+        gap: 6px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      .dot.red { background: #ef4444; }
+      .dot.yellow { background: #f59e0b; }
+      .dot.green { background: #10b981; }
+
+      .preview-url {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 14px;
+        border-radius: 9999px;
+        font-family: monospace;
+        font-size: 11px;
+        color: var(--text-subtle);
+      }
+
+      iframe {
+        width: 100%;
+        height: 720px;
+        border: none;
+        background: #0b0f19;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo-group">
+        <div class="logo-badge">
+          <img src="./icons/icon.svg" width="24" height="24" alt="Checklist Summarizer Logo" />
+        </div>
+        <div class="logo-text">
+          <h1>Checklist Summarizer Power-Up</h1>
+          <p>Local Development &amp; Capability Sandbox</p>
+        </div>
+      </div>
+      <div class="top-nav">
+        <a href="./powerup.html" target="_blank" class="nav-chip">powerup.html</a>
+        <a href="./summarizer.html" target="_blank" class="nav-chip">summarizer.html</a>
+        <a href="./auth.html" target="_blank" class="nav-chip">auth.html</a>
+        <a href="./settings.html" target="_blank" class="nav-chip">settings.html</a>
+      </div>
+    </header>
+
+    <main>
+      <div class="sandbox-grid">
+        <aside class="sidebar">
+          <div class="view-selector-card">
+            <h3 class="section-heading">Preview Views</h3>
+            <button class="view-btn active" onclick="switchView('./summarizer.html', this)">
+              <span>Card Modal View</span>
+              <span>↗</span>
+            </button>
+            <button class="view-btn" onclick="switchView('./summarizer.html?view=card-back-section', this)">
+              <span>Card Back Widget</span>
+              <span>↗</span>
+            </button>
+            <button class="view-btn" onclick="switchView('./summarizer.html?view=board', this)">
+              <span>Board Overview View</span>
+              <span>↗</span>
+            </button>
+            <button class="view-btn" onclick="switchView('./auth.html', this)">
+              <span>OAuth Auth Popup</span>
+              <span>↗</span>
+            </button>
+            <button class="view-btn" onclick="switchView('./settings.html', this)">
+              <span>Settings Popup</span>
+              <span>↗</span>
+            </button>
+            <button class="view-btn" onclick="switchView('./powerup.html', this)">
+              <span>Connector Iframe</span>
+              <span>↗</span>
+            </button>
+          </div>
+
+          <div class="info-card">
+            <strong>Register in Trello:</strong>
+            <p style="margin: 6px 0 10px;">
+              Go to <code>trello.com/power-ups/admin</code> &rarr; Create Power-Up &rarr; set Iframe connector URL to:
+            </p>
+            <code>https://&lt;your-domain&gt;/powerup.html</code>
+          </div>
+        </aside>
+
+        <section class="preview-frame-wrapper">
+          <div class="preview-bar">
+            <div class="preview-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <div class="preview-url" id="previewUrlLabel">./summarizer.html</div>
+            <div>
+              <button
+                onclick="document.getElementById('previewFrame').src = document.getElementById('previewFrame').src"
+                style="background: transparent; border: none; color: var(--text-subtle); cursor: pointer; font-size: 11px;"
+              >
+                Reload
+              </button>
+            </div>
+          </div>
+          <iframe id="previewFrame" src="./summarizer.html"></iframe>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      function switchView(url, btn) {
+        document.getElementById("previewFrame").src = url;
+        document.getElementById("previewUrlLabel").textContent = url;
+        document.querySelectorAll(".view-btn").forEach((b) => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+      }
+    </script>
+  </body>
+</html>
