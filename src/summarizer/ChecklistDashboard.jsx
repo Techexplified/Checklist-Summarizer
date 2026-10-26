@@ -27,7 +27,6 @@ import {
   AlertTriangleIcon,
   CalendarIcon,
   PlusIcon,
-  DownloadIcon,
   SettingsIcon,
   MaximizeIcon,
   SearchIcon,
@@ -77,7 +76,6 @@ export default function ChecklistDashboard({ t }) {
 
   // Modals
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [previewItem, setPreviewItem] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
@@ -373,7 +371,6 @@ export default function ChecklistDashboard({ t }) {
       }
       if (e.key === "Escape") {
         setIsAddTaskOpen(false);
-        setIsExportOpen(false);
         setIsSettingsOpen(false);
         setPreviewItem(null);
         setActiveMenuRowId(null);
@@ -727,64 +724,6 @@ export default function ChecklistDashboard({ t }) {
     showToast(`Added: "${newItem.title.slice(0, 32)}..."`);
   }
 
-  // Handle Export Markdown
-  function handleExportMarkdown() {
-    let md = `# Checklist Summary Report\n`;
-    md += `*Generated: ${new Date().toLocaleDateString()}*\n\n`;
-    md += `### 📊 Completion Metrics\n`;
-    md += `- **Total Checklist Items**: ${totalItems}\n`;
-    md += `- **Completion Rate**: ${completionPercent}% (${completedCount}/${totalItems})\n`;
-    md += `- **Pending Tasks**: ${pendingCount}\n`;
-    md += `- **Overdue Tasks**: ${overdueCount}\n`;
-    md += `- **Due Today**: ${dueTodayCount}\n\n`;
-    md += `### 📋 Task Inventory\n\n`;
-
-    filteredItems.forEach((item) => {
-      const check = item.state === "complete" ? "[x]" : "[ ]";
-      const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "Unassigned";
-      md += `- ${check} **${item.title}** (${item.priority}) — *${item.parentCard}* [@${assignee}] — Due: ${item.dueDate}\n`;
-    });
-
-    copyToClipboard(md).then((ok) => {
-      if (ok) {
-        showToast("Markdown summary copied to clipboard!");
-        setIsExportOpen(false);
-      } else {
-        showToast("Unable to copy to clipboard.");
-      }
-    });
-  }
-
-  // Handle Export CSV
-  function handleExportCSV() {
-    const headers = ["Checklist Item", "State", "Checklist", "Priority", "Parent Card", "Board", "Assignee", "Due Date"];
-    const rows = filteredItems.map((item) => {
-      const board = boards.find((b) => b.id === item.boardId)?.name || "";
-      const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "";
-      return [
-        `"${item.title.replace(/"/g, '""')}"`,
-        item.state,
-        `"${item.checklistName}"`,
-        item.priority,
-        `"${item.parentCard}"`,
-        `"${board}"`,
-        `"${assignee}"`,
-        `"${item.dueDate}"`,
-      ].join(",");
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `checklist_summary_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setIsExportOpen(false);
-    showToast("CSV file exported successfully!");
-  }
-
   // Toggle Fullscreen & Expanded Width
   function toggleFullscreen() {
     setIsExpanded((prev) => !prev);
@@ -848,17 +787,7 @@ export default function ChecklistDashboard({ t }) {
             id="btn-add-task"
           >
             <PlusIcon width={16} height={16} />
-            <span>Add Task</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn-light-action"
-            onClick={() => setIsExportOpen(true)}
-            id="btn-export"
-          >
-            <DownloadIcon width={15} height={15} />
-            <span>Export</span>
+            <span>Add Task (Checklist)</span>
           </button>
 
           {/* Refresh Live Data */}
@@ -1707,85 +1636,6 @@ export default function ChecklistDashboard({ t }) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          MODAL: EXPORT OPTIONS
-          ========================================================================= */}
-      {isExportOpen && (
-        <div className="modal-backdrop" onClick={() => setIsExportOpen(false)}>
-          <div className="modal-dialog export-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <DownloadIcon width={17} height={17} style={{ color: "var(--blue)" }} />
-                <h2 className="modal-title">Export Checklist Summary</h2>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setIsExportOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body export-modal-body">
-              <p className="export-subtitle">
-                Select your preferred export format for the active view (<strong>{filteredItems.length}</strong> task{filteredItems.length !== 1 ? "s" : ""}):
-              </p>
-
-              <div className="export-options-list">
-                <button
-                  type="button"
-                  className="export-tile"
-                  onClick={handleExportMarkdown}
-                >
-                  <div className="export-tile-icon-box icon-markdown">
-                    <CopyIcon width={20} height={20} />
-                  </div>
-                  <div className="export-tile-text">
-                    <div className="export-tile-title-row">
-                      <span className="export-tile-title">Copy Markdown Report</span>
-                      <span className="export-format-tag tag-md">Markdown</span>
-                    </div>
-                    <span className="export-tile-desc">
-                      Ideal for pasting into Trello Card Comments or Slack/Teams updates.
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className="export-tile"
-                  onClick={handleExportCSV}
-                >
-                  <div className="export-tile-icon-box icon-csv">
-                    <DownloadIcon width={20} height={20} />
-                  </div>
-                  <div className="export-tile-text">
-                    <div className="export-tile-title-row">
-                      <span className="export-tile-title">Download CSV Spreadsheet</span>
-                      <span className="export-format-tag tag-csv">.CSV</span>
-                    </div>
-                    <span className="export-tile-desc">
-                      Full dataset with item status, parent card, boards, and assignees.
-                    </span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-modal-cancel"
-                onClick={() => setIsExportOpen(false)}
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}
