@@ -44,6 +44,8 @@ import {
   AlertCircleIcon,
   CopyIcon,
   RefreshCwIcon,
+  ListIcon,
+  FilterIcon,
 } from "../lib/icons.jsx";
 
 
@@ -63,6 +65,7 @@ export default function ChecklistDashboard({ t }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | INCOMPLETE | COMPLETED
   const [boardFilter, setBoardFilter] = useState("ALL");
+  const [listFilter, setListFilter] = useState("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState("ALL");
   const [dueFilter, setDueFilter] = useState("ALL"); // ALL | OVERDUE | TODAY | UPCOMING
   const [sortBy, setSortBy] = useState("dueDate"); // dueDate | title | priority | assignee | board | parentCard
@@ -104,6 +107,16 @@ export default function ChecklistDashboard({ t }) {
       if (name && name !== "Untitled Card") cardSet.add(name);
     });
     return Array.from(cardSet);
+  }, [items]);
+
+  // Extract unique list names from items for smart list filtering
+  const uniqueLists = useMemo(() => {
+    const listSet = new Set();
+    items.forEach((it) => {
+      const name = it.listName?.trim();
+      if (name) listSet.add(name);
+    });
+    return Array.from(listSet);
   }, [items]);
 
   function showToast(text) {
@@ -555,6 +568,9 @@ export default function ChecklistDashboard({ t }) {
         // Board filter
         if (boardFilter !== "ALL" && item.boardId !== boardFilter) return false;
 
+        // List filter
+        if (listFilter !== "ALL" && item.listName !== listFilter) return false;
+
         // Assignee filter
         if (assigneeFilter !== "ALL" && item.assigneeId !== assigneeFilter) return false;
 
@@ -618,7 +634,7 @@ export default function ChecklistDashboard({ t }) {
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
         return 0;
       });
-  }, [items, searchQuery, statusFilter, boardFilter, assigneeFilter, dueFilter, sortBy, sortOrder, boards, assignees]);
+  }, [items, searchQuery, statusFilter, boardFilter, listFilter, assigneeFilter, dueFilter, sortBy, sortOrder, boards, assignees]);
 
   // Grouped items computation
   const groupedItems = useMemo(() => {
@@ -652,6 +668,23 @@ export default function ChecklistDashboard({ t }) {
       });
 
       return Object.values(groupMap).filter((g) => g.items.length > 0);
+    }
+
+    if (groupBy === "list") {
+      const groupMap = {};
+      filteredItems.forEach((item) => {
+        const list = item.listName || "General List";
+        if (!groupMap[list]) {
+          groupMap[list] = {
+            id: list,
+            title: `List: ${list}`,
+            color: "#a371f7",
+            items: [],
+          };
+        }
+        groupMap[list].items.push(item);
+      });
+      return Object.values(groupMap);
     }
 
     if (groupBy === "priority") {
@@ -971,6 +1004,7 @@ export default function ChecklistDashboard({ t }) {
             >
               <option value="none">Group: Flat Table</option>
               <option value="board">Group: By Board</option>
+              <option value="list">Group: By List</option>
               <option value="priority">Group: By Priority</option>
             </select>
             <ChevronDownIcon width={11} height={11} className="select-chevron" />
@@ -1037,6 +1071,42 @@ export default function ChecklistDashboard({ t }) {
                 <ChevronDownIcon width={11} height={11} className="sub-filter-chevron" />
               </div>
             </div>
+
+            {/* List Filter */}
+            <div className="inline-filter-item">
+              <ListIcon width={13} height={13} className="filter-item-icon" />
+              <span className="filter-item-label">List:</span>
+              <div className="inline-select-container">
+                <select
+                  value={listFilter}
+                  onChange={(e) => setListFilter(e.target.value)}
+                  className="sub-filter-select"
+                >
+                  <option value="ALL">All Lists ({uniqueLists.length})</option>
+                  {uniqueLists.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon width={11} height={11} className="sub-filter-chevron" />
+              </div>
+            </div>
+
+            {listFilter !== "ALL" && (
+              <button
+                type="button"
+                className="active-filter-pill"
+                onClick={() => {
+                  setListFilter("ALL");
+                  showToast("Showing all lists");
+                }}
+                title="Click to clear list filter and view all lists"
+              >
+                <span>List: {listFilter}</span>
+                <span className="filter-pill-close">✕</span>
+              </button>
+            )}
 
             {/* Assignee Filter */}
             <div className="inline-filter-item">
@@ -1215,9 +1285,19 @@ export default function ChecklistDashboard({ t }) {
                       <div className="parent-card-name" title={item.parentCardFull}>
                         {item.parentCard}
                       </div>
-                      <div className="parent-card-list">
-                        List: {item.listName}
-                      </div>
+                      <button
+                        type="button"
+                        className="parent-card-list-btn"
+                        title={`Filter dashboard to list: ${item.listName}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setListFilter(item.listName);
+                          showToast(`Filtered by list: "${item.listName}"`);
+                        }}
+                      >
+                        <ListIcon width={10} height={10} />
+                        <span>List: {item.listName}</span>
+                      </button>
                     </td>
 
                     {/* Board */}
@@ -1341,6 +1421,19 @@ export default function ChecklistDashboard({ t }) {
                               >
                                 <EyeIcon width={13} height={13} />
                                 <span>Inspect Details</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="row-menu-item"
+                                onClick={() => {
+                                  setListFilter(item.listName);
+                                  setActiveMenuRowId(null);
+                                  showToast(`Filtered by list: "${item.listName}"`);
+                                }}
+                              >
+                                <ListIcon width={13} height={13} />
+                                <span>View in List ({item.listName})</span>
                               </button>
 
                               <button
@@ -1780,6 +1873,32 @@ export default function ChecklistDashboard({ t }) {
                     </div>
                   </div>
 
+                  {/* List / Column with View in List button */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <ListIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">List</span>
+                    </div>
+                    <div className="prop-val prop-val-list-container">
+                      <span className="prop-list-badge" title={previewItem.listName || "General List"}>
+                        {previewItem.listName || "General List"}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-view-in-list-pill"
+                        title={`Filter dashboard to show all checklists in "${previewItem.listName}"`}
+                        onClick={() => {
+                          setListFilter(previewItem.listName || "ALL");
+                          setPreviewItem(null);
+                          showToast(`Showing checklists in "${previewItem.listName}"`);
+                        }}
+                      >
+                        <EyeIcon width={11} height={11} />
+                        <span>View in List</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Board */}
                   <div className="preview-prop">
                     <div className="prop-header">
@@ -1820,20 +1939,36 @@ export default function ChecklistDashboard({ t }) {
               </div>
 
               <div className="modal-footer inspector-footer">
-                <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  title="Copy Markdown representation"
-                  onClick={async () => {
-                    const md = `- [${isCompleted ? "x" : " "}] ${previewItem.title} (${previewItem.priority}) — *${previewItem.parentCardFull || previewItem.parentCard}* Due: ${previewItem.dueDate}`;
-                    const ok = await copyToClipboard(md);
-                    if (ok) showToast("Task Markdown copied!");
-                    else showToast("Unable to copy task.");
-                  }}
-                >
-                  <CopyIcon width={13} height={13} />
-                  <span>Copy Markdown</span>
-                </button>
+                <div className="inspector-actions-left">
+                  <button
+                    type="button"
+                    className="btn-modal-cancel"
+                    title="Copy Markdown representation"
+                    onClick={async () => {
+                      const md = `- [${isCompleted ? "x" : " "}] ${previewItem.title} (${previewItem.priority}) — *${previewItem.parentCardFull || previewItem.parentCard}* Due: ${previewItem.dueDate}`;
+                      const ok = await copyToClipboard(md);
+                      if (ok) showToast("Task Markdown copied!");
+                      else showToast("Unable to copy task.");
+                    }}
+                  >
+                    <CopyIcon width={13} height={13} />
+                    <span>Copy Markdown</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn-modal-action-list"
+                    title={`View all checklists in list "${previewItem.listName}"`}
+                    onClick={() => {
+                      setListFilter(previewItem.listName || "ALL");
+                      setPreviewItem(null);
+                      showToast(`Showing checklists in "${previewItem.listName}"`);
+                    }}
+                  >
+                    <EyeIcon width={13} height={13} />
+                    <span>View in List ({previewItem.listName || "This List"})</span>
+                  </button>
+                </div>
 
                 <div className="inspector-actions-right">
                   <button

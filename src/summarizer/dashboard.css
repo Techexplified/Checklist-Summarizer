@@ -1313,12 +1313,141 @@ select option,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inspector-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .inspector-actions-right {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* List property inside inspector */
+.prop-val-list-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.prop-list-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(163, 113, 247, 0.12);
+  color: #d2a8ff;
+  border: 1px solid rgba(163, 113, 247, 0.28);
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-view-in-list-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(56, 139, 253, 0.14);
+  color: #58a6ff;
+  border: 1px solid rgba(56, 139, 253, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-view-in-list-pill:hover {
+  background: #388bfd;
+  border-color: #388bfd;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(56, 139, 253, 0.35);
+}
+
+.btn-modal-action-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: var(--radius-sm);
+  background: rgba(163, 113, 247, 0.14);
+  border: 1px solid rgba(163, 113, 247, 0.35);
+  color: #d2a8ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-modal-action-list:hover {
+  background: rgba(163, 113, 247, 0.28);
+  border-color: #a371f7;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(163, 113, 247, 0.3);
+}
+
+/* Parent card list link in table rows */
+.parent-card-list-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parent-card-list-btn:hover {
+  color: #58a6ff;
+  text-decoration: underline;
+}
+
+/* Active filter pill */
+.active-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: rgba(163, 113, 247, 0.16);
+  border: 1px solid rgba(163, 113, 247, 0.38);
+  color: #d2a8ff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.active-filter-pill:hover {
+  background: rgba(248, 81, 73, 0.2);
+  border-color: rgba(248, 81, 73, 0.4);
+  color: #f85149;
+}
+
+.filter-pill-close {
+  font-size: 10px;
+  opacity: 0.8;
 }
 
 /* =========================================================================
