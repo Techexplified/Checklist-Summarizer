@@ -60,6 +60,26 @@ export default function SummarizerApp({ t }) {
   // Load data based on viewMode
   useEffect(() => {
     loadData();
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel("checklist_summarizer_auth");
+      bc.onmessage = () => {
+        loadData();
+      };
+    } catch (e) {}
+
+    function handleStorage(e) {
+      if (e.key === "trello_token" && e.newValue) {
+        loadData();
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      if (bc) bc.close();
+    };
   }, [viewMode, t]);
 
   // Adjust iframe size if compact
@@ -126,18 +146,35 @@ export default function SummarizerApp({ t }) {
         let currentCard = null;
         if (t && typeof t.card === "function") {
           try {
-            currentCard = await t.card("id", "name", "desc", "checklists", "due", "badges", "url").catch(() => null);
+            currentCard = await t.card("all").catch(() => null);
+          } catch (e) {}
+          if (!currentCard) {
+            try {
+              currentCard = await t.card("id", "name", "desc", "due", "badges", "url").catch(() => null);
+            } catch (e) {}
+          }
+        }
+
+        let ctxCardId = null;
+        if (t && typeof t.getContext === "function") {
+          try {
+            const ctx = t.getContext();
+            if (ctx && ctx.card) ctxCardId = ctx.card;
           } catch (e) {}
         }
 
-        let checklists = currentCard?.checklists || [];
+        const cardId = currentCard?.id || targetCardId || ctxCardId;
+        let checklists = [];
 
-        // If card checklists are missing or targetCardId specified, try REST API if authorized
-        if ((!checklists || checklists.length === 0) && currentCard?.id) {
+        // Fetch real checklists via Trello REST API
+        if (cardId) {
           const authed = await isAuthorized(t).catch(() => false);
           if (authed) {
             try {
-              const apiChecklists = await getCardChecklists(t, currentCard.id).catch(() => null);
+              const apiChecklists = await getCardChecklists(t, cardId).catch((err) => {
+                console.error("Failed to fetch card checklists via API", err);
+                return null;
+              });
               if (Array.isArray(apiChecklists) && apiChecklists.length > 0) {
                 checklists = apiChecklists;
               }
@@ -145,9 +182,39 @@ export default function SummarizerApp({ t }) {
           }
         }
 
+        // If card name is not yet loaded, try fetching name directly
+        let cardName = currentCard?.name;
+        if (!cardName && t && typeof t.card === "function") {
+          try {
+            const nameObj = await t.card("name").catch(() => null);
+            if (nameObj && nameObj.name) cardName = nameObj.name;
+          } catch (e) {}
+        }
+
+        // Fallback to badges if checklists couldn't be loaded
+        if (checklists.length === 0 && currentCard?.badges?.checkItems > 0) {
+          const total = currentCard.badges.checkItems;
+          const completed = currentCard.badges.checkItemsChecked || 0;
+          const items = [];
+          for (let i = 0; i < total; i++) {
+            items.push({
+              id: `ci_${i}`,
+              name: `Task Item ${i + 1}`,
+              state: i < completed ? "complete" : "incomplete",
+            });
+          }
+          checklists = [
+            {
+              id: "cl_default",
+              name: "Checklist",
+              checkItems: items,
+            },
+          ];
+        }
+
         setCardData({
-          id: currentCard?.id || targetCardId || "card_1",
-          name: currentCard?.name || "Sprint Feature Card",
+          id: cardId || "card_1",
+          name: cardName || currentCard?.name || "Sprint Feature Card",
           url: currentCard?.url || "#",
           due: currentCard?.due || null,
           checklists: checklists,
@@ -178,12 +245,37 @@ export default function SummarizerApp({ t }) {
     return generateExecutiveBrief(cardAnalysis);
   }, [cardAnalysis]);
 
-  // Copy Markdown to Clipboard
+  // Copy Markdown to Clipboard (with fallback for embedded iframe)
   async function handleCopyMarkdown() {
-    try {
-      await navigator.clipboard.writeText(markdownText);
+    if (!markdownText) {
+      showToast("No markdown summary to copy.");
+      return;
+    }
+    let success = false;
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      try {
+        await navigator.clipboard.writeText(markdownText);
+        success = true;
+      } catch (e) {}
+    }
+    if (!success) {
+      try {
+        const el = document.createElement("textarea");
+        el.value = markdownText;
+        el.setAttribute("readonly", "");
+        el.style.position = "fixed";
+        el.style.left = "-9999px";
+        el.style.top = "-9999px";
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        success = document.execCommand("copy");
+        document.body.removeChild(el);
+      } catch (e) {}
+    }
+    if (success) {
       showToast("📋 Markdown summary copied to clipboard!");
-    } catch (e) {
+    } else {
       showToast("Unable to copy to clipboard.");
     }
   }

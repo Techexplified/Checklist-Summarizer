@@ -101,7 +101,7 @@ TrelloPowerUp.initialize({
   // Capability: Front-of-card badges showing checklist progress
   "card-badges": async function (t) {
     try {
-      const card = await t.card("badges", "checklists").catch(() => null);
+      const card = await t.card("badges").catch(() => null);
       if (!card) return [];
 
       let total = 0;
