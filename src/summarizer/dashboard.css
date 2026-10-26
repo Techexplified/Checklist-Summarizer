@@ -1016,6 +1016,7 @@ body {
 }
 .btn-modal-primary:hover { background: #1558c0; transform: translateY(-1px); }
 
+.btn-modal-cancel,
 .btn-modal-secondary {
   display: inline-flex;
   align-items: center;
@@ -1030,7 +1031,25 @@ body {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.btn-modal-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+.btn-modal-cancel:hover,
+.btn-modal-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-focus); }
+
+.btn-modal-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #2ea043, #238636);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(46, 160, 67, 0.35);
+}
+.btn-modal-success:hover { background: #238636; transform: translateY(-1px); }
 
 .btn-modal-danger {
   display: inline-flex;
@@ -1047,6 +1066,171 @@ body {
   transition: all 0.15s ease;
 }
 .btn-modal-danger:hover { background: rgba(248, 81, 73, 0.25); }
+
+/* =========================================================================
+   TASK INSPECTOR MODAL
+   ========================================================================= */
+.inspector-dialog {
+  max-width: 580px !important;
+}
+
+.inspector-body {
+  padding: 20px !important;
+}
+
+.inspector-hero-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(56, 139, 253, 0.08) 0%, rgba(22, 27, 34, 0.7) 100%);
+  border: 1px solid rgba(56, 139, 253, 0.22);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  transition: all 0.2s ease;
+}
+
+.inspector-hero-card.is-done {
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.08) 0%, rgba(22, 27, 34, 0.7) 100%);
+  border-color: rgba(63, 185, 80, 0.25);
+}
+
+.inspector-task-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.inspector-task-title.is-done {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.preview-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .preview-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.preview-prop {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.preview-prop:hover {
+  border-color: rgba(56, 139, 253, 0.35);
+  background: rgba(28, 35, 51, 0.9);
+}
+
+.prop-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prop-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.prop-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prop-val {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  word-break: break-word;
+  min-height: 22px;
+}
+
+.prop-text-highlight {
+  color: #79c0ff;
+  font-weight: 600;
+}
+
+.prop-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Badges inside inspector */
+.inspector-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inspector-badge.badge-completed {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.inspector-badge.badge-pending {
+  background: rgba(56, 139, 253, 0.12);
+  color: #58a6ff;
+  border: 1px solid rgba(56, 139, 253, 0.25);
+}
+
+.inspector-badge.badge-overdue {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.inspector-badge.badge-today {
+  background: rgba(210, 153, 34, 0.15);
+  color: #e3b341;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.inspector-badge.badge-upcoming {
+  background: var(--bg-surface);
+  color: var(--text-body);
+  border: 1px solid var(--border);
+}
+
+.inspector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inspector-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 /* =========================================================================
    6. TOAST

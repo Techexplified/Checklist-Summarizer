@@ -1651,104 +1651,228 @@ export default function ChecklistDashboard({ t }) {
       )}
 
       {/* =========================================================================
-          MODAL: TASK PREVIEW DETAILS
+          MODAL: TASK PREVIEW DETAILS / INSPECTOR
           ========================================================================= */}
-      {previewItem && (
-        <div className="modal-backdrop" onClick={() => setPreviewItem(null)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span className={`priority-tag ${
-                  previewItem.priority === "CRITICAL"
-                    ? "priority-critical"
-                    : previewItem.priority === "HIGH"
-                    ? "priority-high"
-                    : previewItem.priority === "MEDIUM"
-                    ? "priority-medium"
-                    : "priority-low"
-                }`}>
-                  {previewItem.priority}
-                </span>
-                <h2 className="modal-title" style={{ fontSize: "15px" }}>
-                  Task Inspector
-                </h2>
+      {previewItem && (() => {
+        const board = boards.find((b) => b.id === previewItem.boardId);
+        const assignee = assignees.find((u) => u.id === previewItem.assigneeId);
+        const isCompleted = previewItem.state === "complete";
+
+        return (
+          <div className="modal-backdrop" onClick={() => setPreviewItem(null)}>
+            <div className="modal-dialog inspector-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span className={`priority-tag ${
+                    previewItem.priority === "CRITICAL"
+                      ? "priority-critical"
+                      : previewItem.priority === "HIGH"
+                      ? "priority-high"
+                      : previewItem.priority === "MEDIUM"
+                      ? "priority-medium"
+                      : "priority-low"
+                  }`}>
+                    {previewItem.priority}
+                  </span>
+                  <h2 className="modal-title" style={{ fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <EyeIcon width={16} height={16} style={{ color: "var(--blue)" }} />
+                    Task Inspector
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={() => setPreviewItem(null)}
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setPreviewItem(null)}
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="modal-body">
-              <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "var(--text-primary)", lineHeight: 1.4 }}>
-                {previewItem.title}
-              </h3>
+              <div className="modal-body inspector-body">
+                {/* Hero card with interactive checkbox and title */}
+                <div className={`inspector-hero-card ${isCompleted ? "is-done" : ""}`}>
+                  <button
+                    type="button"
+                    className={`item-toggle-circle ${isCompleted ? "done" : ""}`}
+                    style={{ marginTop: "2px" }}
+                    onClick={() => {
+                      toggleItemState(previewItem.id);
+                      setPreviewItem((prev) => ({
+                        ...prev,
+                        state: prev.state === "complete" ? "incomplete" : "complete",
+                        dueStatus: prev.state === "complete" ? (prev.isOverdue ? "Overdue" : prev.isDueToday ? "Today" : "Upcoming") : "Completed",
+                      }));
+                    }}
+                    title={isCompleted ? "Mark incomplete" : "Mark complete"}
+                  >
+                    {isCompleted && <CheckIcon width={11} height={11} />}
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 className={`inspector-task-title ${isCompleted ? "is-done" : ""}`}>
+                      {previewItem.title}
+                    </h3>
+                  </div>
+                </div>
 
-              <div className="preview-detail-grid">
-                <div className="preview-prop">
-                  <span className="prop-label">Status</span>
-                  <span className="prop-val">
-                    {previewItem.state === "complete" ? "✅ Completed" : "⏳ Incomplete / Pending"}
-                  </span>
-                </div>
-                <div className="preview-prop">
-                  <span className="prop-label">Due Date</span>
-                  <span className="prop-val">
-                    {previewItem.dueDate} ({previewItem.dueStatus})
-                  </span>
-                </div>
-                <div className="preview-prop">
-                  <span className="prop-label">Parent Card</span>
-                  <span className="prop-val">{previewItem.parentCardFull}</span>
-                </div>
-                <div className="preview-prop">
-                  <span className="prop-label">Checklist Name</span>
-                  <span className="prop-val">{previewItem.checklistName}</span>
-                </div>
-                <div className="preview-prop">
-                  <span className="prop-label">Board</span>
-                  <span className="prop-val">
-                    {boards.find((b) => b.id === previewItem.boardId)?.name || "Current Board"}
-                  </span>
-                </div>
-                <div className="preview-prop">
-                  <span className="prop-label">Assignee</span>
-                  <span className="prop-val">
-                    {assignees.find((u) => u.id === previewItem.assigneeId)?.name || "Unassigned"}
-                  </span>
+                {/* Structured property cards */}
+                <div className="preview-detail-grid">
+                  {/* Status */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <ClockIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">Status</span>
+                    </div>
+                    <div className="prop-val">
+                      {isCompleted ? (
+                        <span className="inspector-badge badge-completed">
+                          <CheckCircleIcon width={12} height={12} />
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="inspector-badge badge-pending">
+                          <ClockIcon width={12} height={12} />
+                          Incomplete / Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Due Date */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <CalendarIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">Due Date</span>
+                    </div>
+                    <div className="prop-val">
+                      {isCompleted ? (
+                        <span className="inspector-badge badge-upcoming">
+                          <CalendarIcon width={12} height={12} />
+                          {previewItem.dueDate || "No date"} ({previewItem.dueStatus || "Completed"})
+                        </span>
+                      ) : previewItem.isOverdue ? (
+                        <span className="inspector-badge badge-overdue">
+                          <AlertCircleIcon width={12} height={12} />
+                          {previewItem.dueDate || "Overdue"} (Overdue)
+                        </span>
+                      ) : previewItem.isDueToday ? (
+                        <span className="inspector-badge badge-today">
+                          <CalendarIcon width={12} height={12} />
+                          {previewItem.dueDate || "Today"} (Today)
+                        </span>
+                      ) : (
+                        <span className="inspector-badge badge-upcoming">
+                          <CalendarIcon width={12} height={12} />
+                          {previewItem.dueDate || "No due date"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Parent Card */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <LayersIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">Parent Card</span>
+                    </div>
+                    <div className="prop-val prop-text-highlight" title={previewItem.parentCardFull || previewItem.parentCard}>
+                      {previewItem.parentCardFull || previewItem.parentCard || "—"}
+                    </div>
+                  </div>
+
+                  {/* Checklist Name */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <SlidersIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">Checklist Name</span>
+                    </div>
+                    <div className="prop-val">
+                      {previewItem.checklistName || "Checklist"}
+                    </div>
+                  </div>
+
+                  {/* Board */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <span
+                        className="prop-color-dot"
+                        style={{ background: board?.color || "#388bfd" }}
+                      />
+                      <span className="prop-label">Board</span>
+                    </div>
+                    <div className="prop-val">
+                      {board?.name || "Current Board"}
+                    </div>
+                  </div>
+
+                  {/* Assignee */}
+                  <div className="preview-prop">
+                    <div className="prop-header">
+                      <UserIcon width={13} height={13} className="prop-icon" />
+                      <span className="prop-label">Assignee</span>
+                    </div>
+                    <div className="prop-val">
+                      {assignee ? (
+                        <div className="assignee-wrapper">
+                          <div
+                            className="assignee-avatar"
+                            style={{ background: assignee.bg || "#388bfd" }}
+                          >
+                            {assignee.initials || assignee.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="assignee-name">{assignee.name}</span>
+                        </div>
+                      ) : (
+                        <span className="unassigned-text">Unassigned</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-modal-cancel"
-                onClick={() => {
-                  toggleItemState(previewItem.id);
-                  setPreviewItem((prev) => ({
-                    ...prev,
-                    state: prev.state === "complete" ? "incomplete" : "complete",
-                    dueStatus: prev.state === "complete" ? (prev.isOverdue ? "Overdue" : prev.isDueToday ? "Today" : "Upcoming") : "Completed",
-                  }));
-                }}
-              >
-                {previewItem.state === "complete" ? "Mark Incomplete" : "Mark as Done"}
-              </button>
-              <button
-                type="button"
-                className="btn-modal-primary"
-                onClick={() => setPreviewItem(null)}
-              >
-                Close
-              </button>
+              <div className="modal-footer inspector-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  title="Copy Markdown representation"
+                  onClick={() => {
+                    const md = `- [${isCompleted ? "x" : " "}] ${previewItem.title} (${previewItem.priority}) — *${previewItem.parentCardFull || previewItem.parentCard}* Due: ${previewItem.dueDate}`;
+                    navigator.clipboard.writeText(md);
+                    showToast("Task Markdown copied!");
+                  }}
+                >
+                  <CopyIcon width={13} height={13} />
+                  <span>Copy Markdown</span>
+                </button>
+
+                <div className="inspector-actions-right">
+                  <button
+                    type="button"
+                    className={isCompleted ? "btn-modal-secondary" : "btn-modal-success"}
+                    onClick={() => {
+                      toggleItemState(previewItem.id);
+                      setPreviewItem((prev) => ({
+                        ...prev,
+                        state: prev.state === "complete" ? "incomplete" : "complete",
+                        dueStatus: prev.state === "complete" ? (prev.isOverdue ? "Overdue" : prev.isDueToday ? "Today" : "Upcoming") : "Completed",
+                      }));
+                    }}
+                  >
+                    <CheckIcon width={13} height={13} />
+                    <span>{isCompleted ? "Mark Incomplete" : "Mark as Done"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-modal-primary"
+                    onClick={() => setPreviewItem(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================================
           MODAL: SETTINGS & TRELLO INTEGRATION
