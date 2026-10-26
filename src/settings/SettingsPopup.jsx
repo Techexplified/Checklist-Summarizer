@@ -65,11 +65,11 @@ export default function SettingsPopup({ t }) {
   function handleOpenSummarizer() {
     if (t && typeof t.modal === "function") {
       t.modal({
-        url: "./summarizer.html",
+        url: "./summarizer.html?view=board",
         accentColor: "#0f172a",
-        height: 680,
-        fullscreen: false,
-        title: "Checklist Summarizer",
+        height: 720,
+        fullscreen: true,
+        title: "Board Checklists Overview",
       });
     }
     if (t && typeof t.closePopup === "function") {
