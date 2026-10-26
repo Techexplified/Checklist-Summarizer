@@ -18,6 +18,9 @@ import {
   getBoardMembers,
   updateCheckItemState,
   getCurrentMember,
+  createCard,
+  createCardChecklist,
+  createCheckItem,
 } from "../lib/trelloApi.js";
 import {
   CheckIcon,
@@ -55,6 +58,8 @@ export default function ChecklistDashboard({ t }) {
   const [isLoading, setIsLoading] = useState(false);
   const [liveBoards, setLiveBoards] = useState([]);     // [{id, name, color}]
   const [liveAssignees, setLiveAssignees] = useState([]); // [{id, name, initials, bg}]
+  const [liveLists, setLiveLists] = useState([]);       // [{id, name}]
+  const [liveCards, setLiveCards] = useState([]);       // raw cards from board
 
   const boards = isLive ? liveBoards : INITIAL_BOARDS;
   const assignees = isLive ? liveAssignees : INITIAL_ASSIGNEES;
@@ -92,32 +97,53 @@ export default function ChecklistDashboard({ t }) {
 
   // New task form state (clean defaults, no mock placeholders)
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskTargetList, setNewTaskTargetList] = useState("");
   const [newTaskChecklist, setNewTaskChecklist] = useState("");
   const [newTaskCard, setNewTaskCard] = useState("");
   const [newTaskBoard, setNewTaskBoard] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState("MEDIUM");
   const [newTaskDue, setNewTaskDue] = useState("");
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Extract unique card names from items for smart autocomplete
+  // Extract unique card names from live cards and items for smart autocomplete
   const uniqueCards = useMemo(() => {
     const cardSet = new Set();
+    liveCards.forEach((c) => {
+      if (c.name && c.name !== "Untitled Card") cardSet.add(c.name);
+    });
     items.forEach((it) => {
       const name = it.parentCardFull || it.parentCard;
       if (name && name !== "Untitled Card") cardSet.add(name);
     });
     return Array.from(cardSet);
-  }, [items]);
+  }, [liveCards, items]);
 
   // Extract unique list names from items for smart list filtering
   const uniqueLists = useMemo(() => {
     const listSet = new Set();
+    liveLists.forEach((l) => {
+      if (l.name) listSet.add(l.name.trim());
+    });
     items.forEach((it) => {
       const name = it.listName?.trim();
       if (name) listSet.add(name);
     });
     return Array.from(listSet);
-  }, [items]);
+  }, [liveLists, items]);
+
+  // Available lists for task creation and selection
+  const availableLists = useMemo(() => {
+    if (liveLists.length > 0) return liveLists;
+    if (uniqueLists.length > 0) {
+      return uniqueLists.map((name, i) => ({ id: `list_${i}`, name }));
+    }
+    return [
+      { id: "list_todo", name: "To Do" },
+      { id: "list_in_progress", name: "In Progress" },
+      { id: "list_done", name: "Done" },
+    ];
+  }, [liveLists, uniqueLists]);
 
   function showToast(text) {
     setToastMsg(text);
@@ -275,6 +301,8 @@ export default function ChecklistDashboard({ t }) {
 
       setLiveBoards(liveBoardList);
       setLiveAssignees(Object.values(memberMap));
+      setLiveLists(rawLists.filter((l) => !l.closed).map((l) => ({ id: l.id, name: l.name })));
+      setLiveCards(rawCards);
       setItems(flatItems.length > 0 ? flatItems : []);
       setIsLive(true);
       if (flatItems.length > 0) {
@@ -721,40 +749,116 @@ export default function ChecklistDashboard({ t }) {
     return null;
   }, [filteredItems, groupBy, boards]);
 
-  // Handle Add Task
-  function handleAddTaskSubmit(e) {
+  // Handle Add Task with live Trello card & checklist creation
+  async function handleAddTaskSubmit(e) {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
-    const cardName = newTaskCard.trim() || (uniqueCards[0] || "General Tasks");
-    const checklistName = newTaskChecklist.trim() || "Checklist";
-    const boardId = newTaskBoard || boards[0]?.id || "default_board";
-    const dueDateLabel = newTaskDue.trim() || "No Due Date";
+    setIsCreatingTask(true);
+    try {
+      const cardName = newTaskCard.trim() || (uniqueCards[0] || "General Tasks");
+      const checklistName = newTaskChecklist.trim() || "Checklist";
+      const boardId = newTaskBoard || boards[0]?.id || "default_board";
+      const dueDateLabel = newTaskDue.trim() || "No Due Date";
 
-    const newItem = {
-      id: `item-${Date.now()}`,
-      title: newTaskTitle.trim(),
-      checklistName: checklistName,
-      priority: newTaskPriority || "MEDIUM",
-      parentCard: cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName,
-      parentCardFull: cardName,
-      listName: "In Progress",
-      boardId: boardId,
-      assigneeId: newTaskAssignee || null,
-      dueDate: dueDateLabel,
-      dueStatus: dueDateLabel === "No Due Date" ? "None" : "Upcoming",
-      state: "incomplete",
-      isDueToday: dueDateLabel.toLowerCase().includes("today"),
-      isOverdue: false,
-    };
+      // Determine chosen list ID and name
+      const chosenListObj = availableLists.find((l) => l.id === newTaskTargetList) || availableLists[0];
+      const targetListId = chosenListObj?.id;
+      const targetListName = chosenListObj?.name || "In Progress";
 
-    setItems((prev) => [newItem, ...prev]);
-    setIsAddTaskOpen(false);
-    setNewTaskTitle("");
-    setNewTaskCard("");
-    setNewTaskChecklist("");
-    setNewTaskDue("");
-    showToast(`Added: "${newItem.title.slice(0, 32)}..."`);
+      // If connected to live Trello API, create card and checklist on Trello!
+      if (isLive && t) {
+        let cardId = null;
+        let checklistId = null;
+
+        // 1. Check if card with this name exists on the board
+        const existingCard = liveCards.find(
+          (c) => c.name.trim().toLowerCase() === cardName.trim().toLowerCase()
+        );
+
+        if (existingCard) {
+          cardId = existingCard.id;
+        } else {
+          // Create new card in the target list
+          if (!targetListId) {
+            throw new Error("Target list is required to create a new card on Trello.");
+          }
+          const createdCard = await createCard(t, targetListId, cardName, {
+            idMembers: newTaskAssignee ? [newTaskAssignee] : [],
+          });
+          cardId = createdCard?.id;
+        }
+
+        if (!cardId) {
+          throw new Error("Unable to identify or create parent card on Trello.");
+        }
+
+        // 2. Check if checklist with this name exists on the card
+        const cardChecklists = existingCard?.checklists || [];
+        const existingCl = cardChecklists.find(
+          (cl) => cl.name.trim().toLowerCase() === checklistName.trim().toLowerCase()
+        );
+
+        if (existingCl) {
+          checklistId = existingCl.id;
+        } else {
+          // Create new checklist on the card
+          const createdCl = await createCardChecklist(t, cardId, checklistName);
+          checklistId = createdCl?.id;
+        }
+
+        if (!checklistId) {
+          throw new Error("Unable to identify or create checklist on card.");
+        }
+
+        // 3. Create check item in the checklist
+        await createCheckItem(t, checklistId, newTaskTitle.trim(), {
+          idMember: newTaskAssignee || null,
+        });
+
+        // 4. Reload live board data directly from Trello REST API
+        await loadRealData();
+
+        showToast(`Created task on Trello in list "${targetListName}"!`);
+        setIsAddTaskOpen(false);
+        setNewTaskTitle("");
+        setNewTaskCard("");
+        setNewTaskChecklist("");
+        setNewTaskDue("");
+        return;
+      }
+
+      // Offline / fallback local state creation
+      const newItem = {
+        id: `item-${Date.now()}`,
+        title: newTaskTitle.trim(),
+        checklistName: checklistName,
+        priority: newTaskPriority || "MEDIUM",
+        parentCard: cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName,
+        parentCardFull: cardName,
+        listName: targetListName,
+        boardId: boardId,
+        assigneeId: newTaskAssignee || null,
+        dueDate: dueDateLabel,
+        dueStatus: dueDateLabel === "No Due Date" ? "None" : "Upcoming",
+        state: "incomplete",
+        isDueToday: dueDateLabel.toLowerCase().includes("today"),
+        isOverdue: false,
+      };
+
+      setItems((prev) => [newItem, ...prev]);
+      setIsAddTaskOpen(false);
+      setNewTaskTitle("");
+      setNewTaskCard("");
+      setNewTaskChecklist("");
+      setNewTaskDue("");
+      showToast(`Added: "${newItem.title.slice(0, 32)}..." in ${targetListName}`);
+    } catch (err) {
+      console.error("Failed to create task on Trello:", err);
+      showToast(`Creation error: ${err.message || "Failed to create task on Trello"}`);
+    } finally {
+      setIsCreatingTask(false);
+    }
   }
 
   // Toggle Fullscreen & Expanded Width
@@ -816,7 +920,16 @@ export default function ChecklistDashboard({ t }) {
           <button
             type="button"
             className="btn-add-task"
-            onClick={() => setIsAddTaskOpen(true)}
+            onClick={() => {
+              if (availableLists.length > 0) {
+                const match = availableLists.find((l) => l.name === listFilter || l.id === listFilter);
+                setNewTaskTargetList(match ? match.id : availableLists[0].id);
+              }
+              if (boards.length > 0) {
+                setNewTaskBoard(boards[0].id);
+              }
+              setIsAddTaskOpen(true);
+            }}
             id="btn-add-task"
           >
             <PlusIcon width={16} height={16} />
@@ -1641,16 +1754,20 @@ export default function ChecklistDashboard({ t }) {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Priority</label>
+                    <label className="form-label">
+                      Target List / Column <span className="required-star">*</span>
+                    </label>
                     <select
                       className="form-select"
-                      value={newTaskPriority}
-                      onChange={(e) => setNewTaskPriority(e.target.value)}
+                      value={newTaskTargetList || availableLists[0]?.id || ""}
+                      onChange={(e) => setNewTaskTargetList(e.target.value)}
+                      required
                     >
-                      <option value="CRITICAL">Critical</option>
-                      <option value="HIGH">High</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="LOW">Low</option>
+                      {availableLists.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1685,7 +1802,21 @@ export default function ChecklistDashboard({ t }) {
                   </div>
                 </div>
 
-                <div className="form-row" style={{ marginBottom: 0 }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Priority</label>
+                    <select
+                      className="form-select"
+                      value={newTaskPriority}
+                      onChange={(e) => setNewTaskPriority(e.target.value)}
+                    >
+                      <option value="CRITICAL">Critical</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
+                    </select>
+                  </div>
+
                   <div className="form-group">
                     <label className="form-label">Assignee</label>
                     <select
@@ -1701,7 +1832,9 @@ export default function ChecklistDashboard({ t }) {
                       ))}
                     </select>
                   </div>
+                </div>
 
+                <div className="form-row" style={{ marginBottom: 0 }}>
                   <div className="form-group">
                     <label className="form-label">Due Date</label>
                     <input
@@ -1720,12 +1853,26 @@ export default function ChecklistDashboard({ t }) {
                   type="button"
                   className="btn-modal-cancel"
                   onClick={() => setIsAddTaskOpen(false)}
+                  disabled={isCreatingTask}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-primary">
-                  <PlusIcon width={15} height={15} />
-                  <span>Create Task</span>
+                <button
+                  type="submit"
+                  className="btn-modal-primary"
+                  disabled={isCreatingTask}
+                >
+                  {isCreatingTask ? (
+                    <>
+                      <span className="spin-icon"><RefreshCwIcon width={13} height={13} /></span>
+                      <span>Creating on Trello...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusIcon width={14} height={14} />
+                      <span>Create Task</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

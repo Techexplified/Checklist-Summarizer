@@ -183,3 +183,21 @@ export function createCardChecklist(t, cardId, name = "Checklist") {
     params: { name },
   });
 }
+
+/**
+ * Creates a new card in a specified Trello list.
+ */
+export function createCard(t, idList, name, { desc = "", due = null, idMembers = [] } = {}) {
+  const params = { idList, name };
+  if (desc) params.desc = desc;
+  if (due) params.due = due;
+  if (Array.isArray(idMembers) && idMembers.length > 0) {
+    params.idMembers = idMembers.join(",");
+  } else if (typeof idMembers === "string" && idMembers.trim()) {
+    params.idMembers = idMembers;
+  }
+  return apiFetch(t, "/cards", {
+    method: "POST",
+    params,
+  });
+}
