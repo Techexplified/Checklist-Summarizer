@@ -2053,7 +2053,12 @@ export default function ChecklistDashboard({ t }) {
       )}
 
       {/* Toast Notification */}
-      {toastMsg && <div className="dashboard-toast">{toastMsg}</div>}
+      {toastMsg && (
+        <div className="dashboard-toast">
+          <CheckCircleIcon width={15} height={15} style={{ color: "var(--green)" }} />
+          <span>{toastMsg}</span>
+        </div>
+      )}
     </div>
   );
 }
