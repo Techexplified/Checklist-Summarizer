@@ -73,6 +73,7 @@ export default function ChecklistDashboard({ t }) {
   // Refs & Row menu
   const searchInputRef = useRef(null);
   const [activeMenuRowId, setActiveMenuRowId] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Modals
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -738,8 +739,9 @@ export default function ChecklistDashboard({ t }) {
     showToast("CSV file exported successfully!");
   }
 
-  // Toggle Fullscreen
+  // Toggle Fullscreen & Expanded Width
   function toggleFullscreen() {
+    setIsExpanded((prev) => !prev);
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
@@ -757,7 +759,7 @@ export default function ChecklistDashboard({ t }) {
   const isAllSelected = selectedItemIds.size === filteredItems.length && filteredItems.length > 0;
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${isExpanded ? "is-expanded" : ""}`}>
       {/* =========================================================================
           TOP HEADER
           ========================================================================= */}
@@ -841,9 +843,9 @@ export default function ChecklistDashboard({ t }) {
 
           <button
             type="button"
-            className="btn-icon-square"
+            className={`btn-icon-square ${isExpanded ? "active" : ""}`}
             onClick={toggleFullscreen}
-            title="Toggle Fullscreen"
+            title={isExpanded ? "Collapse View (Standard Width)" : "Expand View (Full Width)"}
             id="btn-fullscreen"
           >
             <MaximizeIcon width={16} height={16} />

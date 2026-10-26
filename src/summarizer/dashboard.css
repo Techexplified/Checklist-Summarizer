@@ -79,6 +79,12 @@ body {
   padding: 22px 24px 60px;
   min-height: 100vh;
   background: var(--bg-base);
+  transition: max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), padding 0.25s ease;
+}
+
+.dashboard-container.is-expanded {
+  max-width: 100% !important;
+  padding: 16px 20px 60px;
 }
 
 /* =========================================================================
@@ -548,6 +554,15 @@ body {
   padding-right: 18px;
   outline: none;
 }
+
+select option,
+.custom-select option,
+.sub-filter-select option {
+  background: #161b22;
+  color: #e6edf3;
+  padding: 8px 10px;
+}
+
 .select-chevron {
   position: absolute;
   right: 8px;
