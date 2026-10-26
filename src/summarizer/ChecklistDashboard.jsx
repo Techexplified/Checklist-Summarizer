@@ -1140,13 +1140,12 @@ export default function ChecklistDashboard({ t }) {
           <tbody>
             {/* Helper function to render each item row */}
             {(() => {
-              const renderTableRow = (item, index, totalCount) => {
+              const renderTableRow = (item) => {
                 const isChecked = item.state === "complete";
                 const isSelected = selectedItemIds.has(item.id);
                 const board = boards.find((b) => b.id === item.boardId);
                 const assignee = assignees.find((u) => u.id === item.assigneeId);
                 const isMenuOpen = activeMenuRowId === item.id;
-                const isDropdownUp = typeof index === "number" && typeof totalCount === "number" && totalCount > 1 && index >= totalCount - 1;
 
                 const priorityClass =
                   item.priority === "CRITICAL"
@@ -1295,7 +1294,21 @@ export default function ChecklistDashboard({ t }) {
                           </button>
 
                           {isMenuOpen && (
-                            <div className={`row-dropdown-menu ${isDropdownUp ? "dropdown-menu-up" : ""}`} onClick={(e) => e.stopPropagation()}>
+                            <div
+                              className="row-dropdown-menu"
+                              ref={(el) => {
+                                if (el) {
+                                  const rect = el.getBoundingClientRect();
+                                  if (rect.bottom > window.innerHeight - 12) {
+                                    el.style.top = "auto";
+                                    el.style.bottom = "100%";
+                                    el.style.marginTop = "0";
+                                    el.style.marginBottom = "5px";
+                                  }
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <button
                                 type="button"
                                 className="row-menu-item"
@@ -1389,14 +1402,14 @@ export default function ChecklistDashboard({ t }) {
                           </div>
                         </td>
                       </tr>
-                      {group.items.map((item, idx) => renderTableRow(item, idx, group.items.length))}
+                      {group.items.map((item) => renderTableRow(item))}
                     </React.Fragment>
                   );
                 });
               }
 
               // Flat mode rendering
-              return filteredItems.map((item, idx) => renderTableRow(item, idx, filteredItems.length));
+              return filteredItems.map((item) => renderTableRow(item));
             })()}
 
             {filteredItems.length === 0 && (
