@@ -14,6 +14,26 @@ export default function SettingsPopup({ t }) {
 
   useEffect(() => {
     loadMemberProfile();
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel("checklist_summarizer_auth");
+      bc.onmessage = () => {
+        loadMemberProfile();
+      };
+    } catch (e) {}
+
+    function handleStorage(e) {
+      if (e.key === "trello_token" && e.newValue) {
+        loadMemberProfile();
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      if (bc) bc.close();
+    };
   }, []);
 
   async function loadMemberProfile() {

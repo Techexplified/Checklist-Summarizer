@@ -32,15 +32,35 @@
     window.history.replaceState(null, "", window.location.pathname);
   }
 
-  // Post the token securely to the opener window (Checklist Summarizer Power-Up auth popup)
+  // Store token in localStorage for cross-context persistence on this origin
+  try {
+    localStorage.setItem("trello_token", token);
+    localStorage.setItem("trello_token_time", Date.now().toString());
+  } catch (e) {}
+
+  // Broadcast the token to any open tabs/iframes via BroadcastChannel
+  try {
+    var bc = new BroadcastChannel("checklist_summarizer_auth");
+    bc.postMessage({
+      source: "checklist-summarizer-powerup-auth",
+      token: token,
+    });
+    setTimeout(function () {
+      bc.close();
+    }, 1000);
+  } catch (e) {}
+
+  // Post the token securely to the opener window if available
   if (window.opener) {
-    window.opener.postMessage(
-      {
-        source: "checklist-summarizer-powerup-auth",
-        token: token,
-      },
-      window.location.origin
-    );
+    try {
+      window.opener.postMessage(
+        {
+          source: "checklist-summarizer-powerup-auth",
+          token: token,
+        },
+        window.location.origin
+      );
+    } catch (e) {}
   }
 
   if (titleEl) titleEl.textContent = "Connection Successful!";

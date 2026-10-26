@@ -18,18 +18,10 @@ export default function AuthPopup({ t }) {
   const popupRef = useRef(null);
 
   useEffect(() => {
-    async function handleMessage(event) {
-      if (event.origin !== window.location.origin) return;
-      if (!event.data || event.data.source !== AUTH_MESSAGE_SOURCE) return;
-
-      if (!event.data.token) {
-        setStatus("error");
-        setErrorMessage("No authorization token received from Trello.");
-        return;
-      }
-
+    async function handleToken(token) {
+      if (!token) return;
       try {
-        await saveToken(t, event.data.token);
+        await saveToken(t, token);
         setStatus("success");
       } catch (err) {
         setStatus("error");
@@ -40,8 +32,44 @@ export default function AuthPopup({ t }) {
       }
     }
 
+    async function handleMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      if (!event.data || event.data.source !== AUTH_MESSAGE_SOURCE) return;
+
+      if (!event.data.token) {
+        setStatus("error");
+        setErrorMessage("No authorization token received from Trello.");
+        return;
+      }
+
+      await handleToken(event.data.token);
+    }
+
+    // BroadcastChannel support
+    let bc = null;
+    try {
+      bc = new BroadcastChannel("checklist_summarizer_auth");
+      bc.onmessage = (event) => {
+        if (event.data && event.data.token) {
+          handleToken(event.data.token);
+        }
+      };
+    } catch (e) {}
+
+    // Storage event support
+    function handleStorage(e) {
+      if (e.key === "trello_token" && e.newValue) {
+        handleToken(e.newValue);
+      }
+    }
+
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("storage", handleStorage);
+      if (bc) bc.close();
+    };
   }, [t]);
 
   useEffect(() => {

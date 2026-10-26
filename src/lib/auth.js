@@ -6,7 +6,7 @@
 // by any other board member. It is never stored on external servers.
 
 export const APP_KEY =
-  import.meta.env.VITE_TRELLO_APP_KEY || "a4ef4a43f0544e198fc93d286848d00c";
+  import.meta.env.VITE_TRELLO_APP_KEY || "3e288f2527bfbb6b61a6fcf3979917ef";
 export const APP_NAME = "Checklist Summarizer Power-Up";
 
 // Shared message tag validated by authorized.js and AuthPopup.jsx
@@ -15,34 +15,70 @@ export const AUTH_MESSAGE_SOURCE = "checklist-summarizer-powerup-auth";
 const TOKEN_KEY = "token";
 
 /**
- * Retrieves the stored token from Trello member-private storage.
+ * Retrieves the stored token from Trello member-private storage with localStorage fallback.
  * @param {object} t - Trello Power-Up client instance
  * @returns {Promise<string|null>}
  */
-export function getToken(t) {
-  if (!t || typeof t.get !== "function") return Promise.resolve(null);
-  return t.get("member", "private", TOKEN_KEY);
+export async function getToken(t) {
+  let token = null;
+  if (t && typeof t.get === "function") {
+    try {
+      token = await t.get("member", "private", TOKEN_KEY);
+    } catch (e) {
+      token = null;
+    }
+  }
+
+  if (!token) {
+    try {
+      token = localStorage.getItem("trello_token");
+      // If found in localStorage, backfill into Trello member storage for future calls
+      if (token && t && typeof t.set === "function") {
+        t.set("member", "private", TOKEN_KEY, token).catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  return token || null;
 }
 
 /**
- * Saves the authenticated token into Trello member-private storage.
+ * Saves the authenticated token into Trello member-private storage and localStorage.
  * @param {object} t - Trello Power-Up client instance
  * @param {string} token - Trello member OAuth token
  * @returns {Promise<void>}
  */
-export function saveToken(t, token) {
-  if (!t || typeof t.set !== "function") return Promise.resolve();
-  return t.set("member", "private", TOKEN_KEY, token);
+export async function saveToken(t, token) {
+  try {
+    if (token) {
+      localStorage.setItem("trello_token", token);
+    } else {
+      localStorage.removeItem("trello_token");
+    }
+  } catch (e) {}
+
+  if (t && typeof t.set === "function") {
+    try {
+      await t.set("member", "private", TOKEN_KEY, token);
+    } catch (e) {}
+  }
 }
 
 /**
- * Clears the stored token from Trello member-private storage.
+ * Clears the stored token from Trello member-private storage and localStorage.
  * @param {object} t - Trello Power-Up client instance
  * @returns {Promise<void>}
  */
-export function clearToken(t) {
-  if (!t || typeof t.remove !== "function") return Promise.resolve();
-  return t.remove("member", "private", TOKEN_KEY);
+export async function clearToken(t) {
+  try {
+    localStorage.removeItem("trello_token");
+  } catch (e) {}
+
+  if (t && typeof t.remove === "function") {
+    try {
+      await t.remove("member", "private", TOKEN_KEY);
+    } catch (e) {}
+  }
 }
 
 /**

@@ -300,22 +300,58 @@ export default function ChecklistDashboard({ t }) {
     checkAuthStatus();
   }, [loadRealData, checkAuthStatus]);
 
-  // Listen for popup auth messages from Trello authorization popup
+  // Listen for auth messages via postMessage, BroadcastChannel, localStorage, and window focus
   useEffect(() => {
+    async function handleTokenReceived(token) {
+      if (!token) return;
+      await saveToken(t, token);
+      showToast("Connected to Trello successfully!");
+      setAuthStatus("connected");
+      setNeedsAuth(false);
+      await checkAuthStatus();
+      await loadRealData();
+    }
+
     async function handleAuthMessage(event) {
       if (event.origin !== window.location.origin) return;
       if (!event.data || event.data.source !== AUTH_MESSAGE_SOURCE) return;
       if (event.data.token) {
-        await saveToken(t, event.data.token);
-        showToast("Connected to Trello successfully!");
-        setAuthStatus("connected");
-        setNeedsAuth(false);
-        await checkAuthStatus();
-        await loadRealData();
+        await handleTokenReceived(event.data.token);
       }
     }
+
+    // BroadcastChannel support for cross-window / cross-iframe communication
+    let bc = null;
+    try {
+      bc = new BroadcastChannel("checklist_summarizer_auth");
+      bc.onmessage = (event) => {
+        if (event.data && event.data.token) {
+          handleTokenReceived(event.data.token);
+        }
+      };
+    } catch (e) {}
+
+    // Storage event for changes across same origin
+    function handleStorage(e) {
+      if (e.key === "trello_token" && e.newValue) {
+        handleTokenReceived(e.newValue);
+      }
+    }
+
+    // Window focus refresh (e.g. after returning from authorization popup)
+    function handleWindowFocus() {
+      checkAuthStatus();
+    }
+
     window.addEventListener("message", handleAuthMessage);
-    return () => window.removeEventListener("message", handleAuthMessage);
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      window.removeEventListener("message", handleAuthMessage);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleWindowFocus);
+      if (bc) bc.close();
+    };
   }, [t, loadRealData, checkAuthStatus]);
 
   // Keyboard shortcut: '/' focuses search input; 'Escape' closes modals & menus
@@ -348,25 +384,17 @@ export default function ChecklistDashboard({ t }) {
   function handleConnectTrello() {
     const returnUrl = `${window.location.origin}/authorized.html`;
     const authUrl = buildAuthorizeUrl(returnUrl);
-    if (t && typeof t.popup === "function") {
-      t.popup({
-        title: "Authorize Checklist Summarizer",
-        url: "./auth.html",
-        height: 380,
-      });
-    } else {
-      const width = 580;
-      const height = 750;
-      const screenWidth = window.screen?.availWidth || 1280;
-      const screenHeight = window.screen?.availHeight || 800;
-      const left = Math.max(0, Math.round((screenWidth - width) / 2));
-      const top = Math.max(0, Math.round((screenHeight - height) / 2));
-      window.open(
-        authUrl,
-        "trelloAuthPopup",
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-      );
-    }
+    const width = 580;
+    const height = 750;
+    const screenWidth = window.screen?.availWidth || 1280;
+    const screenHeight = window.screen?.availHeight || 800;
+    const left = Math.max(0, Math.round((screenWidth - width) / 2));
+    const top = Math.max(0, Math.round((screenHeight - height) / 2));
+    window.open(
+      authUrl,
+      "trelloAuthPopup",
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
   }
 
   // Save manual token handler
