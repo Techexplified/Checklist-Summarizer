@@ -188,8 +188,17 @@ export function getTrelloClient() {
       } catch (e) {}
       return Promise.resolve();
     },
-    sizeTo: (selector) => Promise.resolve(),
-    closePopup: () => {},
+    closeModal: () => Promise.resolve(),
+    closePopup: () => Promise.resolve(),
+    showCard: (cardId) => {
+      const c = MOCK_CARDS.find((x) => x.id === cardId) || MOCK_CARDS[0];
+      if (c && c.url) window.open(c.url, "_blank");
+      return Promise.resolve();
+    },
+    navigate: (opts) => {
+      if (opts && opts.url) window.open(opts.url, "_blank");
+      return Promise.resolve();
+    },
     popup: (opts) => {
       if (opts && opts.url) {
         window.open(opts.url, "_blank");

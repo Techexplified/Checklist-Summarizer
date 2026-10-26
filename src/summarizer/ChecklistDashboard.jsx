@@ -49,6 +49,7 @@ import {
   RefreshCwIcon,
   ListIcon,
   FilterIcon,
+  ExternalLinkIcon,
 } from "../lib/icons.jsx";
 
 
@@ -281,6 +282,8 @@ export default function ChecklistDashboard({ t }) {
               _rawCardId: card.id,
               _rawChecklistId: cl.id,
               _rawCheckItemId: ci.id,
+              cardUrl: card.url || `https://trello.com/c/${card.id}`,
+              idList: card.idList,
               title: ci.name,
               checklistName: cl.name,
               priority: "MEDIUM",
@@ -749,6 +752,60 @@ export default function ChecklistDashboard({ t }) {
     return null;
   }, [filteredItems, groupBy, boards]);
 
+  // Redirect / navigate to the parent card and checklist directly in Trello list
+  function redirectToCardInList(item) {
+    if (!item) return;
+    const cardId = item._rawCardId;
+    const cardUrl = item.cardUrl;
+
+    // 1. Trello Power-Up client showCard (official Trello API: closes modal, scrolls to list, and opens card)
+    if (t && cardId && typeof t.showCard === "function") {
+      try {
+        if (typeof t.closeModal === "function") {
+          try { t.closeModal(); } catch (e) {}
+        }
+        t.showCard(cardId);
+        setPreviewItem(null);
+        return;
+      } catch (err) {
+        console.warn("t.showCard failed, trying URL navigation:", err);
+      }
+    }
+
+    // 2. Trello client navigate
+    if (t && cardUrl && typeof t.navigate === "function") {
+      try {
+        if (typeof t.closeModal === "function") {
+          try { t.closeModal(); } catch (e) {}
+        }
+        t.navigate({ url: cardUrl });
+        setPreviewItem(null);
+        return;
+      } catch (err) {
+        console.warn("t.navigate failed:", err);
+      }
+    }
+
+    // 3. Top window navigation
+    if (cardUrl) {
+      try {
+        if (window.top && window.top !== window) {
+          window.top.location.href = cardUrl;
+          return;
+        }
+      } catch (err) {}
+      window.open(cardUrl, "_blank");
+      return;
+    }
+
+    // 4. Fallback: filter list inside table
+    if (item.listName) {
+      setListFilter(item.listName);
+      setPreviewItem(null);
+      showToast(`Showing list: ${item.listName}`);
+    }
+  }
+
   // Handle Add Task with live Trello card & checklist creation
   async function handleAddTaskSubmit(e) {
     e.preventDefault();
@@ -1207,18 +1264,32 @@ export default function ChecklistDashboard({ t }) {
             </div>
 
             {listFilter !== "ALL" && (
-              <button
-                type="button"
-                className="active-filter-pill"
-                onClick={() => {
-                  setListFilter("ALL");
-                  showToast("Showing all lists");
-                }}
-                title="Click to clear list filter and view all lists"
-              >
-                <span>List: {listFilter}</span>
-                <span className="filter-pill-close">✕</span>
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  type="button"
+                  className="active-filter-pill"
+                  onClick={() => {
+                    setListFilter("ALL");
+                    showToast("Showing all lists");
+                  }}
+                  title="Click to clear list filter and view all lists"
+                >
+                  <span>List: {listFilter}</span>
+                  <span className="filter-pill-close">✕</span>
+                </button>
+
+                {filteredItems.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-open-list-board"
+                    onClick={() => redirectToCardInList(filteredItems[0])}
+                    title={`Redirect to list "${listFilter}" on Trello board`}
+                  >
+                    <ExternalLinkIcon width={11} height={11} />
+                    <span>Open in Board ↗</span>
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Assignee Filter */}
@@ -1395,21 +1466,25 @@ export default function ChecklistDashboard({ t }) {
 
                     {/* Parent Card */}
                     <td className="td-card">
-                      <div className="parent-card-name" title={item.parentCardFull}>
+                      <div
+                        className="parent-card-name parent-card-clickable"
+                        title={`Redirect to card "${item.parentCardFull}" in list "${item.listName}" on Trello`}
+                        onClick={() => redirectToCardInList(item)}
+                      >
                         {item.parentCard}
                       </div>
                       <button
                         type="button"
                         className="parent-card-list-btn"
-                        title={`Filter dashboard to list: ${item.listName}`}
+                        title={`Redirect to list "${item.listName}" and view checklist on Trello`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setListFilter(item.listName);
-                          showToast(`Filtered by list: "${item.listName}"`);
+                          redirectToCardInList(item);
                         }}
                       >
                         <ListIcon width={10} height={10} />
                         <span>List: {item.listName}</span>
+                        <ExternalLinkIcon width={9} height={9} style={{ opacity: 0.7 }} />
                       </button>
                     </td>
 
@@ -1483,6 +1558,15 @@ export default function ChecklistDashboard({ t }) {
                           <EyeIcon width={15} height={15} />
                         </button>
 
+                        <button
+                          type="button"
+                          className="btn-action-icon"
+                          title={`Redirect to list "${item.listName}" and view checklist on Trello`}
+                          onClick={() => redirectToCardInList(item)}
+                        >
+                          <ExternalLinkIcon width={14} height={14} />
+                        </button>
+
                         <div className={`row-menu-container ${isMenuOpen ? "menu-active" : ""}`}>
                           <button
                             type="button"
@@ -1540,13 +1624,12 @@ export default function ChecklistDashboard({ t }) {
                                 type="button"
                                 className="row-menu-item"
                                 onClick={() => {
-                                  setListFilter(item.listName);
                                   setActiveMenuRowId(null);
-                                  showToast(`Filtered by list: "${item.listName}"`);
+                                  redirectToCardInList(item);
                                 }}
                               >
-                                <ListIcon width={13} height={13} />
-                                <span>View in List ({item.listName})</span>
+                                <ExternalLinkIcon width={13} height={13} />
+                                <span>View in List ({item.listName}) ↗</span>
                               </button>
 
                               <button
@@ -2033,15 +2116,11 @@ export default function ChecklistDashboard({ t }) {
                       <button
                         type="button"
                         className="btn-view-in-list-pill"
-                        title={`Filter dashboard to show all checklists in "${previewItem.listName}"`}
-                        onClick={() => {
-                          setListFilter(previewItem.listName || "ALL");
-                          setPreviewItem(null);
-                          showToast(`Showing checklists in "${previewItem.listName}"`);
-                        }}
+                        title={`Redirect to list "${previewItem.listName}" and view checklist in Trello`}
+                        onClick={() => redirectToCardInList(previewItem)}
                       >
-                        <EyeIcon width={11} height={11} />
-                        <span>View in List</span>
+                        <ExternalLinkIcon width={11} height={11} />
+                        <span>View in List ↗</span>
                       </button>
                     </div>
                   </div>
@@ -2105,15 +2184,11 @@ export default function ChecklistDashboard({ t }) {
                   <button
                     type="button"
                     className="btn-modal-action-list"
-                    title={`View all checklists in list "${previewItem.listName}"`}
-                    onClick={() => {
-                      setListFilter(previewItem.listName || "ALL");
-                      setPreviewItem(null);
-                      showToast(`Showing checklists in "${previewItem.listName}"`);
-                    }}
+                    title={`Redirect to list "${previewItem.listName}" and view checklist on Trello`}
+                    onClick={() => redirectToCardInList(previewItem)}
                   >
-                    <EyeIcon width={13} height={13} />
-                    <span>View in List ({previewItem.listName || "This List"})</span>
+                    <ExternalLinkIcon width={13} height={13} />
+                    <span>View in List ({previewItem.listName || "This List"}) ↗</span>
                   </button>
                 </div>
 
