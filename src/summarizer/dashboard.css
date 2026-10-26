@@ -621,15 +621,30 @@ body {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-sm);
+  position: relative;
 }
 
 .checklist-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: left;
   table-layout: fixed;
+}
+
+.checklist-table th:first-child {
+  border-top-left-radius: var(--radius-sm);
+}
+.checklist-table th:last-child {
+  border-top-right-radius: var(--radius-sm);
+}
+.checklist-table tr:last-child td:first-child {
+  border-bottom-left-radius: var(--radius-sm);
+}
+.checklist-table tr:last-child td:last-child {
+  border-bottom-right-radius: var(--radius-sm);
 }
 
 .checklist-table th {
@@ -1663,26 +1678,55 @@ body {
 /* =========================================================================
    ROW ACTIONS DROPDOWN MENU
    ========================================================================= */
+.table-row.row-menu-active {
+  position: relative;
+  z-index: 100;
+}
+
 .row-menu-container {
   position: relative;
   display: inline-block;
+}
+
+.row-menu-container.menu-active {
+  z-index: 105;
 }
 
 .row-dropdown-menu {
   position: absolute;
   right: 0;
   top: 100%;
-  margin-top: 4px;
-  z-index: 50;
-  min-width: 170px;
+  margin-top: 5px;
+  z-index: 250;
+  min-width: 175px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  padding: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 5px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  animation: menuFadeIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.row-dropdown-menu.dropdown-menu-up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 5px;
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .row-menu-item {

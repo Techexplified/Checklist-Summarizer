@@ -1140,12 +1140,13 @@ export default function ChecklistDashboard({ t }) {
           <tbody>
             {/* Helper function to render each item row */}
             {(() => {
-              const renderTableRow = (item) => {
+              const renderTableRow = (item, index, totalCount) => {
                 const isChecked = item.state === "complete";
                 const isSelected = selectedItemIds.has(item.id);
                 const board = boards.find((b) => b.id === item.boardId);
                 const assignee = assignees.find((u) => u.id === item.assigneeId);
                 const isMenuOpen = activeMenuRowId === item.id;
+                const isDropdownUp = typeof index === "number" && typeof totalCount === "number" && totalCount > 1 && index >= totalCount - 1;
 
                 const priorityClass =
                   item.priority === "CRITICAL"
@@ -1161,7 +1162,7 @@ export default function ChecklistDashboard({ t }) {
                     key={item.id}
                     className={`table-row ${isChecked ? "row-completed" : ""} ${
                       isSelected ? "row-selected" : ""
-                    }`}
+                    } ${isMenuOpen ? "row-menu-active" : ""}`}
                   >
                     {/* Checkbox for batch select */}
                     <td className="td-checkbox">
@@ -1280,7 +1281,7 @@ export default function ChecklistDashboard({ t }) {
                           <EyeIcon width={15} height={15} />
                         </button>
 
-                        <div className="row-menu-container">
+                        <div className={`row-menu-container ${isMenuOpen ? "menu-active" : ""}`}>
                           <button
                             type="button"
                             className="btn-action-icon"
@@ -1294,7 +1295,7 @@ export default function ChecklistDashboard({ t }) {
                           </button>
 
                           {isMenuOpen && (
-                            <div className="row-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                            <div className={`row-dropdown-menu ${isDropdownUp ? "dropdown-menu-up" : ""}`} onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 className="row-menu-item"
@@ -1388,14 +1389,14 @@ export default function ChecklistDashboard({ t }) {
                           </div>
                         </td>
                       </tr>
-                      {group.items.map((item) => renderTableRow(item))}
+                      {group.items.map((item, idx) => renderTableRow(item, idx, group.items.length))}
                     </React.Fragment>
                   );
                 });
               }
 
               // Flat mode rendering
-              return filteredItems.map((item) => renderTableRow(item));
+              return filteredItems.map((item, idx) => renderTableRow(item, idx, filteredItems.length));
             })()}
 
             {filteredItems.length === 0 && (
