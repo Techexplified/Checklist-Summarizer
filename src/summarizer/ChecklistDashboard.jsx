@@ -89,14 +89,24 @@ export default function ChecklistDashboard({ t }) {
   const [showManualToken, setShowManualToken] = useState(false);
   const [isSavingToken, setIsSavingToken] = useState(false);
 
-  // New task form state
+  // New task form state (clean defaults, no mock placeholders)
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskChecklist, setNewTaskChecklist] = useState("Product Launch Readiness");
-  const [newTaskCard, setNewTaskCard] = useState("Executive Review & Milestone 3");
-  const [newTaskBoard, setNewTaskBoard] = useState("b1");
-  const [newTaskAssignee, setNewTaskAssignee] = useState("u1");
-  const [newTaskPriority, setNewTaskPriority] = useState("HIGH");
-  const [newTaskDue, setNewTaskDue] = useState("Oct 25");
+  const [newTaskChecklist, setNewTaskChecklist] = useState("");
+  const [newTaskCard, setNewTaskCard] = useState("");
+  const [newTaskBoard, setNewTaskBoard] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState("MEDIUM");
+  const [newTaskDue, setNewTaskDue] = useState("");
+
+  // Extract unique card names from items for smart autocomplete
+  const uniqueCards = useMemo(() => {
+    const cardSet = new Set();
+    items.forEach((it) => {
+      const name = it.parentCardFull || it.parentCard;
+      if (name && name !== "Untitled Card") cardSet.add(name);
+    });
+    return Array.from(cardSet);
+  }, [items]);
 
   function showToast(text) {
     setToastMsg(text);
@@ -686,26 +696,34 @@ export default function ChecklistDashboard({ t }) {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
+    const cardName = newTaskCard.trim() || (uniqueCards[0] || "General Tasks");
+    const checklistName = newTaskChecklist.trim() || "Checklist";
+    const boardId = newTaskBoard || boards[0]?.id || "default_board";
+    const dueDateLabel = newTaskDue.trim() || "No Due Date";
+
     const newItem = {
       id: `item-${Date.now()}`,
       title: newTaskTitle.trim(),
-      checklistName: newTaskChecklist,
-      priority: newTaskPriority,
-      parentCard: newTaskCard,
-      parentCardFull: newTaskCard,
+      checklistName: checklistName,
+      priority: newTaskPriority || "MEDIUM",
+      parentCard: cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName,
+      parentCardFull: cardName,
       listName: "In Progress",
-      boardId: newTaskBoard,
-      assigneeId: newTaskAssignee,
-      dueDate: newTaskDue,
-      dueStatus: "Upcoming",
+      boardId: boardId,
+      assigneeId: newTaskAssignee || null,
+      dueDate: dueDateLabel,
+      dueStatus: dueDateLabel === "No Due Date" ? "None" : "Upcoming",
       state: "incomplete",
-      isDueToday: newTaskDue.toLowerCase().includes("today"),
+      isDueToday: dueDateLabel.toLowerCase().includes("today"),
       isOverdue: false,
     };
 
     setItems((prev) => [newItem, ...prev]);
     setIsAddTaskOpen(false);
     setNewTaskTitle("");
+    setNewTaskCard("");
+    setNewTaskChecklist("");
+    setNewTaskDue("");
     showToast(`Added: "${newItem.title.slice(0, 32)}..."`);
   }
 
@@ -1552,9 +1570,12 @@ export default function ChecklistDashboard({ t }) {
           ========================================================================= */}
       {isAddTaskOpen && (
         <div className="modal-backdrop" onClick={() => setIsAddTaskOpen(false)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog add-task-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Create New Checklist Task</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                <PlusIcon width={16} height={16} style={{ color: "var(--blue)" }} />
+                <h2 className="modal-title">Create New Checklist Task</h2>
+              </div>
               <button
                 type="button"
                 className="modal-close-btn"
@@ -1565,9 +1586,11 @@ export default function ChecklistDashboard({ t }) {
             </div>
 
             <form onSubmit={handleAddTaskSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Task Description *</label>
+              <div className="modal-body" style={{ padding: "20px 24px" }}>
+                <div className="form-group-full">
+                  <label className="form-label">
+                    Task Description <span className="required-star">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -1580,11 +1603,11 @@ export default function ChecklistDashboard({ t }) {
                 </div>
 
                 <div className="form-row">
-                  <div className="form-group flex-1">
+                  <div className="form-group">
                     <label className="form-label">Target Board</label>
                     <select
                       className="form-select"
-                      value={newTaskBoard}
+                      value={newTaskBoard || boards[0]?.id || ""}
                       onChange={(e) => setNewTaskBoard(e.target.value)}
                     >
                       {boards.map((b) => (
@@ -1595,67 +1618,76 @@ export default function ChecklistDashboard({ t }) {
                     </select>
                   </div>
 
-                  <div className="form-group flex-1">
+                  <div className="form-group">
                     <label className="form-label">Priority</label>
                     <select
                       className="form-select"
                       value={newTaskPriority}
                       onChange={(e) => setNewTaskPriority(e.target.value)}
                     >
-                      <option value="CRITICAL">CRITICAL</option>
-                      <option value="HIGH">HIGH</option>
-                      <option value="MEDIUM">MEDIUM</option>
-                      <option value="LOW">LOW</option>
+                      <option value="CRITICAL">Critical</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="form-row">
-                  <div className="form-group flex-1">
+                  <div className="form-group">
                     <label className="form-label">Parent Card Name</label>
                     <input
                       type="text"
+                      list="task-parent-cards"
                       className="form-input"
+                      placeholder={uniqueCards[0] ? `e.g. ${uniqueCards[0]}` : "e.g. Optimize API Performance"}
                       value={newTaskCard}
                       onChange={(e) => setNewTaskCard(e.target.value)}
                     />
+                    <datalist id="task-parent-cards">
+                      {uniqueCards.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
                   </div>
 
-                  <div className="form-group flex-1">
+                  <div className="form-group">
                     <label className="form-label">Checklist Name</label>
                     <input
                       type="text"
                       className="form-input"
+                      placeholder="e.g. Checklist or Sprint QA"
                       value={newTaskChecklist}
                       onChange={(e) => setNewTaskChecklist(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group flex-1">
+                <div className="form-row" style={{ marginBottom: 0 }}>
+                  <div className="form-group">
                     <label className="form-label">Assignee</label>
                     <select
                       className="form-select"
                       value={newTaskAssignee}
                       onChange={(e) => setNewTaskAssignee(e.target.value)}
                     >
+                      <option value="">Unassigned</option>
                       {assignees.map((u) => (
                         <option key={u.id} value={u.id}>
-                          {u.name} ({u.initials})
+                          {u.name} {u.initials ? `(${u.initials})` : ""}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="form-group flex-1">
+                  <div className="form-group">
                     <label className="form-label">Due Date</label>
                     <input
                       type="text"
                       className="form-input"
+                      placeholder="e.g. Tomorrow, Oct 30, or Nov 5"
                       value={newTaskDue}
                       onChange={(e) => setNewTaskDue(e.target.value)}
-                      placeholder="e.g. Oct 28 or Oct 23"
                     />
                   </div>
                 </div>
@@ -1670,7 +1702,8 @@ export default function ChecklistDashboard({ t }) {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-primary">
-                  Create Task
+                  <PlusIcon width={15} height={15} />
+                  <span>Create Task</span>
                 </button>
               </div>
             </form>
