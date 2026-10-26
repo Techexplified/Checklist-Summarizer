@@ -102,6 +102,36 @@ export default function ChecklistDashboard({ t }) {
     setTimeout(() => setToastMsg(null), 3000);
   }
 
+  // Reliable cross-browser clipboard copy with fallback for embedded iframes
+  async function copyToClipboard(text) {
+    if (!text) return false;
+    if (navigator?.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.warn("navigator.clipboard.writeText failed in iframe, using execCommand fallback:", err);
+      }
+    }
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-9999px";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return successful;
+    } catch (e) {
+      console.error("execCommand copy failed:", e);
+      return false;
+    }
+  }
+
   // ── Live Trello data loader ──────────────────────────────────────────────
   const [needsAuth, setNeedsAuth] = useState(false);
 
@@ -454,8 +484,9 @@ export default function ChecklistDashboard({ t }) {
       const assignee = assignees.find((u) => u.id === item.assigneeId)?.name || "Unassigned";
       md += `- ${check} **${item.title}** (${item.priority}) — *${item.parentCard}* [@${assignee}] — Due: ${item.dueDate}\n`;
     });
-    navigator.clipboard.writeText(md).then(() => {
-      showToast(`Copied ${selected.length} selected task(s) to clipboard as Markdown!`);
+    copyToClipboard(md).then((ok) => {
+      if (ok) showToast(`Copied ${selected.length} selected task(s) to clipboard as Markdown!`);
+      else showToast("Unable to copy to clipboard.");
     });
   }
 
@@ -667,11 +698,13 @@ export default function ChecklistDashboard({ t }) {
       md += `- ${check} **${item.title}** (${item.priority}) — *${item.parentCard}* [@${assignee}] — Due: ${item.dueDate}\n`;
     });
 
-    navigator.clipboard.writeText(md).then(() => {
-      showToast("Markdown summary copied to clipboard!");
-      setIsExportOpen(false);
-    }).catch(() => {
-      showToast("Unable to copy to clipboard.");
+    copyToClipboard(md).then((ok) => {
+      if (ok) {
+        showToast("Markdown summary copied to clipboard!");
+        setIsExportOpen(false);
+      } else {
+        showToast("Unable to copy to clipboard.");
+      }
     });
   }
 
@@ -1336,9 +1369,10 @@ export default function ChecklistDashboard({ t }) {
                               <button
                                 type="button"
                                 className="row-menu-item"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(item.title);
-                                  showToast("Task title copied!");
+                                onClick={async () => {
+                                  const ok = await copyToClipboard(item.title);
+                                  if (ok) showToast("Task title copied!");
+                                  else showToast("Unable to copy title.");
                                   setActiveMenuRowId(null);
                                 }}
                               >
@@ -1351,10 +1385,11 @@ export default function ChecklistDashboard({ t }) {
                               <button
                                 type="button"
                                 className="row-menu-item"
-                                onClick={() => {
+                                onClick={async () => {
                                   const md = `- [${isChecked ? "x" : " "}] ${item.title} (${item.priority}) — *${item.parentCard}* Due: ${item.dueDate}`;
-                                  navigator.clipboard.writeText(md);
-                                  showToast("Task Markdown copied!");
+                                  const ok = await copyToClipboard(md);
+                                  if (ok) showToast("Task Markdown copied!");
+                                  else showToast("Unable to copy task.");
                                   setActiveMenuRowId(null);
                                 }}
                               >
@@ -1848,10 +1883,11 @@ export default function ChecklistDashboard({ t }) {
                   type="button"
                   className="btn-modal-cancel"
                   title="Copy Markdown representation"
-                  onClick={() => {
+                  onClick={async () => {
                     const md = `- [${isCompleted ? "x" : " "}] ${previewItem.title} (${previewItem.priority}) — *${previewItem.parentCardFull || previewItem.parentCard}* Due: ${previewItem.dueDate}`;
-                    navigator.clipboard.writeText(md);
-                    showToast("Task Markdown copied!");
+                    const ok = await copyToClipboard(md);
+                    if (ok) showToast("Task Markdown copied!");
+                    else showToast("Unable to copy task.");
                   }}
                 >
                   <CopyIcon width={13} height={13} />
