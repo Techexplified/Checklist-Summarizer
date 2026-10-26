@@ -1653,9 +1653,12 @@ export default function ChecklistDashboard({ t }) {
           ========================================================================= */}
       {isExportOpen && (
         <div className="modal-backdrop" onClick={() => setIsExportOpen(false)}>
-          <div className="modal-dialog max-w-sm" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog export-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Export Checklist Summary</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <DownloadIcon width={17} height={17} style={{ color: "var(--blue)" }} />
+                <h2 className="modal-title">Export Checklist Summary</h2>
+              </div>
               <button
                 type="button"
                 className="modal-close-btn"
@@ -1664,9 +1667,10 @@ export default function ChecklistDashboard({ t }) {
                 ✕
               </button>
             </div>
-            <div className="modal-body">
-              <p style={{ margin: "0 0 16px", fontSize: "13px", color: "#64748b" }}>
-                Select your preferred export format for the current view ({filteredItems.length} tasks):
+
+            <div className="modal-body export-modal-body">
+              <p className="export-subtitle">
+                Select your preferred export format for the active view (<strong>{filteredItems.length}</strong> task{filteredItems.length !== 1 ? "s" : ""}):
               </p>
 
               <div className="export-options-list">
@@ -1675,10 +1679,17 @@ export default function ChecklistDashboard({ t }) {
                   className="export-tile"
                   onClick={handleExportMarkdown}
                 >
-                  <CopyIcon width={20} height={20} className="export-tile-icon" />
+                  <div className="export-tile-icon-box icon-markdown">
+                    <CopyIcon width={20} height={20} />
+                  </div>
                   <div className="export-tile-text">
-                    <strong>Copy Markdown Report</strong>
-                    <span>Ideal for pasting into Trello Card Comments or Slack/Teams updates</span>
+                    <div className="export-tile-title-row">
+                      <span className="export-tile-title">Copy Markdown Report</span>
+                      <span className="export-format-tag tag-md">Markdown</span>
+                    </div>
+                    <span className="export-tile-desc">
+                      Ideal for pasting into Trello Card Comments or Slack/Teams updates.
+                    </span>
                   </div>
                 </button>
 
@@ -1687,13 +1698,30 @@ export default function ChecklistDashboard({ t }) {
                   className="export-tile"
                   onClick={handleExportCSV}
                 >
-                  <DownloadIcon width={20} height={20} className="export-tile-icon" />
+                  <div className="export-tile-icon-box icon-csv">
+                    <DownloadIcon width={20} height={20} />
+                  </div>
                   <div className="export-tile-text">
-                    <strong>Download CSV Spreadsheet</strong>
-                    <span>Full dataset with item status, parent card, boards, and assignees</span>
+                    <div className="export-tile-title-row">
+                      <span className="export-tile-title">Download CSV Spreadsheet</span>
+                      <span className="export-format-tag tag-csv">.CSV</span>
+                    </div>
+                    <span className="export-tile-desc">
+                      Full dataset with item status, parent card, boards, and assignees.
+                    </span>
                   </div>
                 </button>
               </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setIsExportOpen(false)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
