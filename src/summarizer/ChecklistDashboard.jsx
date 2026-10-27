@@ -99,26 +99,6 @@ export default function ChecklistDashboard({ t }) {
   const [newTaskDue, setNewTaskDue] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Available cards in the currently selected target list for smart autocomplete
-  const cardsInTargetList = useMemo(() => {
-    const listId = newTaskTargetList || availableLists[0]?.id;
-    if (!listId || !Array.isArray(liveCards)) return [];
-
-    const cardSet = new Set();
-    liveCards.forEach((c) => {
-      if (c.idList === listId && c.name && c.name !== "Untitled Card") {
-        const name = c.name.trim();
-        // Filter out single-symbol separator cards (like 📌, ⚠️, 🏷️)
-        const isOnlySymbols = name.length <= 2 && !/[a-zA-Z0-9]/.test(name);
-        if (!isOnlySymbols) {
-          cardSet.add(name);
-        }
-      }
-    });
-
-    return Array.from(cardSet);
-  }, [liveCards, newTaskTargetList, availableLists]);
-
   // Extract unique list names from items for smart list filtering
   const uniqueLists = useMemo(() => {
     const listSet = new Set();
@@ -140,6 +120,26 @@ export default function ChecklistDashboard({ t }) {
     }
     return [];
   }, [liveLists, uniqueLists]);
+
+  // Available cards in the currently selected target list for smart autocomplete
+  const cardsInTargetList = useMemo(() => {
+    const listId = newTaskTargetList || availableLists[0]?.id;
+    if (!listId || !Array.isArray(liveCards)) return [];
+
+    const cardSet = new Set();
+    liveCards.forEach((c) => {
+      if (c.idList === listId && c.name && c.name !== "Untitled Card") {
+        const name = c.name.trim();
+        // Filter out single-symbol separator cards (like 📌, ⚠️, 🏷️)
+        const isOnlySymbols = name.length <= 2 && !/[a-zA-Z0-9]/.test(name);
+        if (!isOnlySymbols) {
+          cardSet.add(name);
+        }
+      }
+    });
+
+    return Array.from(cardSet);
+  }, [liveCards, newTaskTargetList, availableLists]);
 
   function showToast(text) {
     setToastMsg(text);
