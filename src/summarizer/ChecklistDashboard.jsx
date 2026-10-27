@@ -141,6 +141,30 @@ export default function ChecklistDashboard({ t }) {
     return Array.from(cardSet);
   }, [liveCards, newTaskTargetList, availableLists]);
 
+  // Custom Card Combobox state
+  const [isCardDropdownOpen, setIsCardDropdownOpen] = useState(false);
+  const cardDropdownRef = useRef(null);
+
+  // Filter cards in target list by typed query
+  const filteredTargetCards = useMemo(() => {
+    if (!newTaskCard.trim()) return cardsInTargetList;
+    const q = newTaskCard.trim().toLowerCase();
+    return cardsInTargetList.filter((c) => c.toLowerCase().includes(q));
+  }, [cardsInTargetList, newTaskCard]);
+
+  // Close combobox when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (cardDropdownRef.current && !cardDropdownRef.current.contains(e.target)) {
+        setIsCardDropdownOpen(false);
+      }
+    }
+    if (isCardDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isCardDropdownOpen]);
+
   function showToast(text) {
     setToastMsg(text);
     setTimeout(() => setToastMsg(null), 3000);
@@ -1857,7 +1881,7 @@ export default function ChecklistDashboard({ t }) {
                 </div>
 
                 <div className="form-row">
-                  <div className="form-group">
+                  <div className="form-group custom-combobox-group" ref={cardDropdownRef}>
                     <label className="form-label">
                       Parent Card Name
                       {cardsInTargetList.length > 0 && (
@@ -1866,23 +1890,84 @@ export default function ChecklistDashboard({ t }) {
                         </span>
                       )}
                     </label>
-                    <input
-                      type="text"
-                      list="task-parent-cards"
-                      className="form-input"
-                      placeholder={
-                        cardsInTargetList[0]
-                          ? `e.g. ${cardsInTargetList[0]}`
-                          : "Type card name (will create card in this list)"
-                      }
-                      value={newTaskCard}
-                      onChange={(e) => setNewTaskCard(e.target.value)}
-                    />
-                    <datalist id="task-parent-cards">
-                      {cardsInTargetList.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                    <div className="custom-combobox-wrapper">
+                      <input
+                        type="text"
+                        className="form-input custom-combobox-input"
+                        placeholder={
+                          cardsInTargetList[0]
+                            ? `e.g. ${cardsInTargetList[0]}`
+                            : "Type card name (or select existing)"
+                        }
+                        value={newTaskCard}
+                        onChange={(e) => {
+                          setNewTaskCard(e.target.value);
+                          setIsCardDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsCardDropdownOpen(true)}
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        className={`combobox-chevron-btn ${isCardDropdownOpen ? "open" : ""}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setIsCardDropdownOpen((prev) => !prev);
+                        }}
+                        title="Toggle cards list"
+                        tabIndex={-1}
+                      >
+                        <ChevronDownIcon width={12} height={12} />
+                      </button>
+
+                      {isCardDropdownOpen && (
+                        <div className="custom-combobox-menu">
+                          {newTaskCard.trim() && !cardsInTargetList.some((c) => c.toLowerCase() === newTaskCard.trim().toLowerCase()) && (
+                            <div
+                              className="combobox-option combobox-create-option"
+                              onClick={() => setIsCardDropdownOpen(false)}
+                            >
+                              <span className="combobox-create-tag">Create New:</span>
+                              <span className="combobox-option-text">"{newTaskCard.trim()}"</span>
+                            </div>
+                          )}
+
+                          {filteredTargetCards.length > 0 ? (
+                            <>
+                              <div className="combobox-section-header">Cards in this list</div>
+                              <div className="combobox-options-list">
+                                {filteredTargetCards.map((c) => {
+                                  const isSelected = newTaskCard.trim().toLowerCase() === c.toLowerCase();
+                                  return (
+                                    <div
+                                      key={c}
+                                      className={`combobox-option ${isSelected ? "selected" : ""}`}
+                                      onClick={() => {
+                                        setNewTaskCard(c);
+                                        setIsCardDropdownOpen(false);
+                                      }}
+                                      title={c}
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="combobox-card-icon">
+                                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                                        <line x1="7" y1="8" x2="17" y2="8" />
+                                        <line x1="7" y1="12" x2="13" y2="12" />
+                                      </svg>
+                                      <span className="combobox-option-text">{c}</span>
+                                      {isSelected && <CheckIcon width={13} height={13} className="combobox-check" />}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="combobox-empty-hint">
+                              {newTaskCard.trim() ? "No matching cards found. Will create this new card." : "No cards in this list yet. Type above to create one."}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="form-group">
