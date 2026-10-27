@@ -53,7 +53,6 @@ TrelloPowerUp.initialize({
           return t.modal({
             url: "./summarizer.html?view=board",
             accentColor: "#0f172a",
-            height: 720,
             fullscreen: true,
             title: "Board Checklists Overview",
           });
@@ -89,7 +88,6 @@ TrelloPowerUp.initialize({
           return t.modal({
             url: `./summarizer.html${cardParam}`,
             accentColor: "#0f172a",
-            height: 720,
             fullscreen: true,
             title: "Checklist Summarizer",
           });
@@ -173,7 +171,6 @@ TrelloPowerUp.initialize({
           return t.modal({
             url: `./summarizer.html${cardParam}`,
             accentColor: "#0f172a",
-            height: 720,
             fullscreen: true,
             title: "Checklist Summarizer",
           });
@@ -201,7 +198,6 @@ TrelloPowerUp.initialize({
             return t.modal({
               url: "./summarizer.html",
               accentColor: "#0f172a",
-              height: 720,
               fullscreen: true,
               title: "Checklist Summarizer",
             });

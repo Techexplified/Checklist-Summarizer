@@ -1494,22 +1494,17 @@ select option,
 .inspector-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px 20px;
 }
 
 .inspector-actions-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.inspector-actions-right {
-  display: flex;
-  align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 /* List property inside inspector */

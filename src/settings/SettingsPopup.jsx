@@ -77,7 +77,6 @@ export default function SettingsPopup({ t }) {
       t.modal({
         url: "./summarizer.html?view=board",
         accentColor: "#0f172a",
-        height: 720,
         fullscreen: true,
         title: "Board Checklists Overview",
       });

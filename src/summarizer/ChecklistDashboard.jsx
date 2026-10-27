@@ -76,7 +76,7 @@ export default function ChecklistDashboard({ t }) {
   // Refs & Row menu
   const searchInputRef = useRef(null);
   const [activeMenuRowId, setActiveMenuRowId] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Modals
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
@@ -2287,9 +2287,7 @@ export default function ChecklistDashboard({ t }) {
                     <ExternalLinkIcon width={13} height={13} />
                     <span>View in {previewItem.listName || "List"} ↗</span>
                   </button>
-                </div>
 
-                <div className="inspector-actions-right">
                   <button
                     type="button"
                     className={isCompleted ? "btn-modal-secondary" : "btn-modal-success"}
@@ -2304,13 +2302,6 @@ export default function ChecklistDashboard({ t }) {
                   >
                     <CheckIcon width={13} height={13} />
                     <span>{isCompleted ? "Mark Incomplete" : "Mark as Done"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-modal-primary"
-                    onClick={() => setPreviewItem(null)}
-                  >
-                    Close
                   </button>
                 </div>
               </div>
