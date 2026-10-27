@@ -99,18 +99,25 @@ export default function ChecklistDashboard({ t }) {
   const [newTaskDue, setNewTaskDue] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Extract unique card names from live cards and items for smart autocomplete
-  const uniqueCards = useMemo(() => {
+  // Available cards in the currently selected target list for smart autocomplete
+  const cardsInTargetList = useMemo(() => {
+    const listId = newTaskTargetList || availableLists[0]?.id;
+    if (!listId || !Array.isArray(liveCards)) return [];
+
     const cardSet = new Set();
     liveCards.forEach((c) => {
-      if (c.name && c.name !== "Untitled Card") cardSet.add(c.name);
+      if (c.idList === listId && c.name && c.name !== "Untitled Card") {
+        const name = c.name.trim();
+        // Filter out single-symbol separator cards (like 📌, ⚠️, 🏷️)
+        const isOnlySymbols = name.length <= 2 && !/[a-zA-Z0-9]/.test(name);
+        if (!isOnlySymbols) {
+          cardSet.add(name);
+        }
+      }
     });
-    items.forEach((it) => {
-      const name = it.parentCardFull || it.parentCard;
-      if (name && name !== "Untitled Card") cardSet.add(name);
-    });
+
     return Array.from(cardSet);
-  }, [liveCards, items]);
+  }, [liveCards, newTaskTargetList, availableLists]);
 
   // Extract unique list names from items for smart list filtering
   const uniqueLists = useMemo(() => {
@@ -794,7 +801,7 @@ export default function ChecklistDashboard({ t }) {
 
     setIsCreatingTask(true);
     try {
-      const cardName = newTaskCard.trim() || (uniqueCards[0] || "General Tasks");
+      const cardName = newTaskCard.trim() || (cardsInTargetList[0] || "General Tasks");
       const checklistName = newTaskChecklist.trim() || "Checklist";
       const boardId = newTaskBoard || boards[0]?.id || "default_board";
       const dueDateLabel = newTaskDue.trim() || "No Due Date";
@@ -809,8 +816,12 @@ export default function ChecklistDashboard({ t }) {
         let cardId = null;
         let checklistId = null;
 
-        // 1. Check if card with this name exists on the board
+        // 1. Check if card with this name exists in the target list (or on the board)
         const existingCard = liveCards.find(
+          (c) =>
+            c.idList === targetListId &&
+            c.name.trim().toLowerCase() === cardName.trim().toLowerCase()
+        ) || liveCards.find(
           (c) => c.name.trim().toLowerCase() === cardName.trim().toLowerCase()
         );
 
@@ -1847,17 +1858,28 @@ export default function ChecklistDashboard({ t }) {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Parent Card Name</label>
+                    <label className="form-label">
+                      Parent Card Name
+                      {cardsInTargetList.length > 0 && (
+                        <span style={{ fontSize: "11px", fontWeight: "normal", color: "var(--text-muted)", marginLeft: "6px" }}>
+                          ({cardsInTargetList.length} card{cardsInTargetList.length !== 1 ? "s" : ""} in this list)
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       list="task-parent-cards"
                       className="form-input"
-                      placeholder={uniqueCards[0] ? `e.g. ${uniqueCards[0]}` : "e.g. Optimize API Performance"}
+                      placeholder={
+                        cardsInTargetList[0]
+                          ? `e.g. ${cardsInTargetList[0]}`
+                          : "Type card name (will create card in this list)"
+                      }
                       value={newTaskCard}
                       onChange={(e) => setNewTaskCard(e.target.value)}
                     />
                     <datalist id="task-parent-cards">
-                      {uniqueCards.map((c) => (
+                      {cardsInTargetList.map((c) => (
                         <option key={c} value={c} />
                       ))}
                     </datalist>
