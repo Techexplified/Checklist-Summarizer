@@ -87,9 +87,6 @@ export default function ChecklistDashboard({ t }) {
   // Settings & Authorization state
   const [authStatus, setAuthStatus] = useState("checking"); // checking | connected | unauthenticated
   const [currentMember, setCurrentMember] = useState(null);
-  const [manualToken, setManualToken] = useState("");
-  const [showManualToken, setShowManualToken] = useState(false);
-  const [isSavingToken, setIsSavingToken] = useState(false);
 
   // New task form state (clean defaults, no mock placeholders)
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -446,26 +443,6 @@ export default function ChecklistDashboard({ t }) {
       "trelloAuthPopup",
       `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
     );
-  }
-
-  // Save manual token handler
-  async function handleSaveManualToken(e) {
-    e.preventDefault();
-    if (!manualToken.trim()) return;
-    setIsSavingToken(true);
-    try {
-      await saveToken(t, manualToken.trim());
-      showToast("Token saved! Loading live board data...");
-      setManualToken("");
-      setShowManualToken(false);
-      setNeedsAuth(false);
-      await checkAuthStatus();
-      await loadRealData();
-    } catch (err) {
-      showToast("Failed to save token: " + (err.message || "Unknown error"));
-    } finally {
-      setIsSavingToken(false);
-    }
   }
 
   // Disconnect Trello handler
@@ -1602,7 +1579,7 @@ export default function ChecklistDashboard({ t }) {
                                 }}
                               >
                                 <ExternalLinkIcon width={13} height={13} />
-                                <span>Open Card on Trello ↗</span>
+                                <span>View in {item.listName || "List"} ↗</span>
                               </button>
 
                               <button
@@ -2188,11 +2165,11 @@ export default function ChecklistDashboard({ t }) {
                   <button
                     type="button"
                     className="btn-modal-action-list"
-                    title={`Open card "${previewItem.parentCardFull || previewItem.parentCard}" on Trello`}
+                    title={`View in list "${previewItem.listName}" on Trello`}
                     onClick={() => redirectToCardInList(previewItem)}
                   >
                     <ExternalLinkIcon width={13} height={13} />
-                    <span>Open on Trello ↗</span>
+                    <span>View in {previewItem.listName || "List"} ↗</span>
                   </button>
                 </div>
 
@@ -2307,42 +2284,6 @@ export default function ChecklistDashboard({ t }) {
                       <span>Connect Trello Account</span>
                     </button>
                   </>
-                )}
-              </div>
-
-              {/* Manual Token Option */}
-              <div style={{ marginTop: "12px" }}>
-                <button
-                  type="button"
-                  style={{ background: "none", border: "none", color: "var(--blue-hover)", fontSize: "12px", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                  onClick={() => setShowManualToken((prev) => !prev)}
-                >
-                  {showManualToken ? "▲ Hide manual token entry" : "▼ Or enter Trello API token manually"}
-                </button>
-
-                {showManualToken && (
-                  <form onSubmit={handleSaveManualToken} className="manual-token-card">
-                    <label style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", display: "block" }}>
-                      Paste your Trello User Token:
-                    </label>
-                    <input
-                      type="password"
-                      className="manual-token-input"
-                      placeholder="e.g. ATTA..."
-                      value={manualToken}
-                      onChange={(e) => setManualToken(e.target.value)}
-                    />
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button
-                        type="submit"
-                        disabled={isSavingToken || !manualToken.trim()}
-                        className="btn-modal-primary"
-                        style={{ padding: "6px 12px", fontSize: "12px", flex: 1 }}
-                      >
-                        {isSavingToken ? "Saving…" : "Save & Sync Board"}
-                      </button>
-                    </div>
-                  </form>
                 )}
               </div>
 

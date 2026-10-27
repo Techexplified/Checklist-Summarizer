@@ -391,16 +391,6 @@ export default function SummarizerApp({ t }) {
             <CopyIcon width={14} height={14} />
             Copy Markdown
           </button>
-          <button
-            type="button"
-            onClick={handlePostComment}
-            disabled={postingComment}
-            className="btn-primary"
-            style={{ padding: "6px 12px", fontSize: "12px" }}
-          >
-            {postingComment ? <SpinnerIcon width={14} height={14} /> : <MessageSquareIcon width={14} height={14} />}
-            Post Comment
-          </button>
         </div>
 
         {toastMessage && <div className="toast-msg">{toastMessage}</div>}
@@ -618,15 +608,6 @@ export default function SummarizerApp({ t }) {
             <CopyIcon width={15} height={15} />
             Copy Markdown
           </button>
-          <button
-            type="button"
-            onClick={handlePostComment}
-            disabled={postingComment}
-            className="btn-primary"
-          >
-            {postingComment ? <SpinnerIcon width={15} height={15} /> : <MessageSquareIcon width={15} height={15} />}
-            Post to Card
-          </button>
         </div>
       </header>
 
@@ -842,15 +823,6 @@ export default function SummarizerApp({ t }) {
             <button type="button" onClick={handleCopyMarkdown} className="btn-secondary">
               <CopyIcon width={15} height={15} />
               Copy Markdown
-            </button>
-            <button
-              type="button"
-              onClick={handlePostComment}
-              disabled={postingComment}
-              className="btn-primary"
-            >
-              {postingComment ? <SpinnerIcon width={15} height={15} /> : <MessageSquareIcon width={15} height={15} />}
-              Post Comment on Card
             </button>
           </div>
         </div>
