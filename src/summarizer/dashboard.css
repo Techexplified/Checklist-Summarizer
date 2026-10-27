@@ -690,15 +690,15 @@ select option,
   color: var(--text-primary);
 }
 
-/* Strict Column Widths (Percentages Sum to 100% + Fixed Widths) */
+/* Strict Column Widths */
 .th-checkbox, .td-checkbox { width: 44px; text-align: center; vertical-align: middle; }
-.th-item, .td-item         { width: 32%; vertical-align: middle; }
+.th-item, .td-item         { width: 33%; vertical-align: middle; }
 .th-card, .td-card         { width: 22%; vertical-align: middle; }
-.th-board, .td-board       { width: 17%; vertical-align: middle; }
-.th-assignee, .td-assignee { width: 13%; vertical-align: middle; }
-.th-due, .td-due           { width: 16%; vertical-align: middle; }
-.th-actions, .td-actions   { width: 64px; text-align: center; vertical-align: middle; }
-.th-actions .th-inner      { justify-content: center; width: 100%; }
+.th-board, .td-board       { width: 16%; vertical-align: middle; }
+.th-assignee, .td-assignee { width: 14%; vertical-align: middle; }
+.th-due, .td-due           { width: 15%; vertical-align: middle; }
+.th-actions, .td-actions   { width: 80px; min-width: 80px; text-align: right; vertical-align: middle; }
+.th-actions .th-inner      { justify-content: flex-end; width: 100%; padding-right: 6px; }
 
 .checklist-table td {
   padding: 11px 12px;
@@ -905,8 +905,11 @@ select option,
 .actions-cell {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 4px;
+}
+.checklist-table td.td-actions {
+  padding: 11px 12px 11px 4px;
 }
 .btn-action-icon {
   border: none;

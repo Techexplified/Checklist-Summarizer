@@ -1281,18 +1281,6 @@ export default function ChecklistDashboard({ t }) {
                   <span>List: {listFilter}</span>
                   <span className="filter-pill-close">✕</span>
                 </button>
-
-                {filteredItems.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn-open-list-board"
-                    onClick={() => redirectToCardInList(filteredItems[0])}
-                    title={`Redirect to list "${listFilter}" on Trello board`}
-                  >
-                    <ExternalLinkIcon width={11} height={11} />
-                    <span>Open in Board ↗</span>
-                  </button>
-                )}
               </div>
             )}
 
@@ -1472,24 +1460,14 @@ export default function ChecklistDashboard({ t }) {
                     <td className="td-card">
                       <div
                         className="parent-card-name parent-card-clickable"
-                        title={`Redirect to card "${item.parentCardFull}" in list "${item.listName}" on Trello`}
+                        title={`Open card "${item.parentCardFull}" on Trello`}
                         onClick={() => redirectToCardInList(item)}
                       >
                         {item.parentCard}
                       </div>
-                      <button
-                        type="button"
-                        className="parent-card-list-btn"
-                        title={`Redirect to list "${item.listName}" and view checklist on Trello`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          redirectToCardInList(item);
-                        }}
-                      >
-                        <ListIcon width={10} height={10} />
-                        <span>List: {item.listName}</span>
-                        <ExternalLinkIcon width={9} height={9} style={{ opacity: 0.7 }} />
-                      </button>
+                      <div className="parent-card-list">
+                        List: {item.listName}
+                      </div>
                     </td>
 
                     {/* Board */}
@@ -1562,15 +1540,6 @@ export default function ChecklistDashboard({ t }) {
                           <EyeIcon width={15} height={15} />
                         </button>
 
-                        <button
-                          type="button"
-                          className="btn-action-icon"
-                          title={`Redirect to list "${item.listName}" and view checklist on Trello`}
-                          onClick={() => redirectToCardInList(item)}
-                        >
-                          <ExternalLinkIcon width={14} height={14} />
-                        </button>
-
                         <div className={`row-menu-container ${isMenuOpen ? "menu-active" : ""}`}>
                           <button
                             type="button"
@@ -1633,7 +1602,7 @@ export default function ChecklistDashboard({ t }) {
                                 }}
                               >
                                 <ExternalLinkIcon width={13} height={13} />
-                                <span>View in List ({item.listName}) ↗</span>
+                                <span>Open Card on Trello ↗</span>
                               </button>
 
                               <button
@@ -2153,19 +2122,10 @@ export default function ChecklistDashboard({ t }) {
                       <ListIcon width={13} height={13} className="prop-icon" />
                       <span className="prop-label">List</span>
                     </div>
-                    <div className="prop-val prop-val-list-container">
+                    <div className="prop-val">
                       <span className="prop-list-badge" title={previewItem.listName || "General List"}>
                         {previewItem.listName || "General List"}
                       </span>
-                      <button
-                        type="button"
-                        className="btn-view-in-list-pill"
-                        title={`Redirect to list "${previewItem.listName}" and view checklist in Trello`}
-                        onClick={() => redirectToCardInList(previewItem)}
-                      >
-                        <ExternalLinkIcon width={11} height={11} />
-                        <span>View in List ↗</span>
-                      </button>
                     </div>
                   </div>
 
@@ -2228,11 +2188,11 @@ export default function ChecklistDashboard({ t }) {
                   <button
                     type="button"
                     className="btn-modal-action-list"
-                    title={`Redirect to list "${previewItem.listName}" and view checklist on Trello`}
+                    title={`Open card "${previewItem.parentCardFull || previewItem.parentCard}" on Trello`}
                     onClick={() => redirectToCardInList(previewItem)}
                   >
                     <ExternalLinkIcon width={13} height={13} />
-                    <span>View in List ({previewItem.listName || "This List"}) ↗</span>
+                    <span>Open on Trello ↗</span>
                   </button>
                 </div>
 
