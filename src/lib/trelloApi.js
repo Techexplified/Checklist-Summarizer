@@ -103,7 +103,8 @@ export function getCardChecklists(t, cardId) {
 export function getBoardCardsWithChecklists(t, boardId) {
   return apiFetch(t, `/boards/${boardId}/cards`, {
     params: {
-      fields: "id,name,desc,idList,idMembers,due,dueComplete,badges,url",
+      filter: "visible",
+      fields: "id,name,desc,idList,idMembers,due,dueComplete,badges,url,closed",
       checklists: "all",
       checklist_fields: "name,pos,idCard",
       checkItem_fields: "name,state,pos,due,idMember",
@@ -117,6 +118,7 @@ export function getBoardCardsWithChecklists(t, boardId) {
 export function getBoardLists(t, boardId) {
   return apiFetch(t, `/boards/${boardId}/lists`, {
     params: {
+      filter: "open",
       fields: "id,name,pos,closed",
     },
   });

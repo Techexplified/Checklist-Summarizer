@@ -99,15 +99,15 @@ export default function ChecklistDashboard({ t }) {
   const [newTaskDue, setNewTaskDue] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Extract unique list names from items for smart list filtering
+  // Extract unique list names strictly from live open lists on the board (preserves board pos order)
   const uniqueLists = useMemo(() => {
+    if (liveLists.length > 0) {
+      return liveLists.map((l) => l.name);
+    }
     const listSet = new Set();
-    liveLists.forEach((l) => {
-      if (l.name) listSet.add(l.name.trim());
-    });
     items.forEach((it) => {
       const name = it.listName?.trim();
-      if (name) listSet.add(name);
+      if (name && name !== "Unknown List") listSet.add(name);
     });
     return Array.from(listSet);
   }, [liveLists, items]);
@@ -226,13 +226,18 @@ export default function ChecklistDashboard({ t }) {
         getBoardMembers(t, board.id),
       ]);
 
-      // Build lookup maps
+      // Filter out any closed/archived lists from Trello & sort by board pos order!
+      const openLists = (rawLists || [])
+        .filter((l) => !l.closed)
+        .sort((a, b) => (a.pos || 0) - (b.pos || 0));
+
+      const openListIds = new Set(openLists.map((l) => l.id));
       const listMap = {};
-      rawLists.forEach((l) => { listMap[l.id] = l.name; });
+      openLists.forEach((l) => { listMap[l.id] = l.name; });
 
       const memberMap = {};
       const AVATAR_COLORS = ["#f97316","#2563eb","#7c3aed","#0891b2","#059669","#dc2626","#db2777","#65a30d"];
-      rawMembers.forEach((m, idx) => {
+      (rawMembers || []).forEach((m, idx) => {
         memberMap[m.id] = {
           id: m.id,
           name: m.fullName || m.username,
@@ -251,14 +256,19 @@ export default function ChecklistDashboard({ t }) {
         icon: "cloud",
       }];
 
-      // Flatten all checklist items across all cards
+      // Flatten all checklist items across visible cards in open board lists
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+      const visibleCards = (rawCards || []).filter(
+        (c) => !c.closed && openListIds.has(c.idList)
+      );
+
       const flatItems = [];
-      for (const card of rawCards) {
+      for (const card of visibleCards) {
         if (!Array.isArray(card.checklists) || card.checklists.length === 0) continue;
-        const listName = listMap[card.idList] || "Unknown List";
+        const listName = listMap[card.idList];
+        if (!listName) continue; // Only include cards from active open lists on the board
         const cardName = card.name || "Untitled Card";
         const cardShort = cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName;
 
@@ -326,8 +336,8 @@ export default function ChecklistDashboard({ t }) {
 
       setLiveBoards(liveBoardList);
       setLiveAssignees(Object.values(memberMap));
-      setLiveLists(rawLists.filter((l) => !l.closed).map((l) => ({ id: l.id, name: l.name })));
-      setLiveCards(rawCards);
+      setLiveLists(openLists.map((l) => ({ id: l.id, name: l.name, pos: l.pos })));
+      setLiveCards(visibleCards);
       setItems(flatItems.length > 0 ? flatItems : []);
       setIsLive(true);
       if (flatItems.length > 0) {
@@ -840,13 +850,12 @@ export default function ChecklistDashboard({ t }) {
         let cardId = null;
         let checklistId = null;
 
-        // 1. Check if card with this name exists in the target list (or on the board)
+        // 1. Check if card with this name exists in the selected target list
         const existingCard = liveCards.find(
           (c) =>
             c.idList === targetListId &&
+            !c.closed &&
             c.name.trim().toLowerCase() === cardName.trim().toLowerCase()
-        ) || liveCards.find(
-          (c) => c.name.trim().toLowerCase() === cardName.trim().toLowerCase()
         );
 
         if (existingCard) {
