@@ -815,6 +815,54 @@ select option,
   border-color: var(--border);
 }
 
+.priority-interactive {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.priority-interactive:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.priority-select-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.priority-select-badge.priority-critical {
+  color: #ff7b72;
+  background: rgba(248, 81, 73, 0.22);
+  border-color: rgba(248, 81, 73, 0.45);
+}
+.priority-select-badge.priority-high {
+  color: #ffa657;
+  background: rgba(255, 166, 87, 0.22);
+  border-color: rgba(255, 166, 87, 0.45);
+}
+.priority-select-badge.priority-medium {
+  color: #e3b341;
+  background: rgba(227, 179, 65, 0.2);
+  border-color: rgba(227, 179, 65, 0.45);
+}
+.priority-select-badge.priority-low {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+.priority-select-badge option {
+  background: #1c2333;
+  color: #e6edf3;
+}
+
 /* ── Parent Card Cell ───────────────────────────────────────── */
 .parent-card-name {
   font-size: 13px;

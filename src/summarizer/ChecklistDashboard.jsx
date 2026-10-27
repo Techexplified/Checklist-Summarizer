@@ -48,6 +48,56 @@ import {
 } from "../lib/icons.jsx";
 
 
+// Priority persistence & detection helpers
+function detectPriorityFromTitle(title) {
+  if (!title) return null;
+  const upper = title.toUpperCase();
+  if (upper.includes("[CRITICAL]") || upper.includes("(CRITICAL)")) return "CRITICAL";
+  if (upper.includes("[HIGH]") || upper.includes("(HIGH)")) return "HIGH";
+  if (upper.includes("[LOW]") || upper.includes("(LOW)")) return "LOW";
+  if (upper.includes("[MEDIUM]") || upper.includes("(MEDIUM)")) return "MEDIUM";
+  return null;
+}
+
+async function getStoredPriorities(t, boardId) {
+  let priorities = {};
+  if (t && typeof t.get === "function") {
+    try {
+      const data = await t.get("board", "shared", "item_priorities", null);
+      if (data && typeof data === "object") {
+        priorities = { ...data };
+      }
+    } catch (e) {}
+  }
+  try {
+    const local = localStorage.getItem(`trello_priorities_${boardId || "default"}`);
+    if (local) {
+      priorities = { ...priorities, ...JSON.parse(local) };
+    }
+  } catch (e) {}
+  return priorities;
+}
+
+async function saveItemPriority(t, boardId, checkItemId, priority) {
+  if (!checkItemId) return;
+  const storageKey = `trello_priorities_${boardId || "default"}`;
+  let current = {};
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (raw) current = JSON.parse(raw);
+  } catch (e) {}
+  current[checkItemId] = priority;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(current));
+  } catch (e) {}
+
+  if (t && typeof t.set === "function") {
+    try {
+      await t.set("board", "shared", "item_priorities", current);
+    } catch (e) {}
+  }
+}
+
 export default function ChecklistDashboard({ t }) {
   // ── Live data state ──────────────────────────────────────────────────────
   const [isLive, setIsLive] = useState(false);          // true = real Trello data loaded
@@ -218,12 +268,12 @@ export default function ChecklistDashboard({ t }) {
         return;
       }
 
-      // 2. Fetch cards (with checklists), lists, and members in parallel
-      //    These REST calls require an OAuth token — they'll throw NOT_AUTHORIZED if missing
-      const [rawCards, rawLists, rawMembers] = await Promise.all([
+      // 2. Fetch cards (with checklists), lists, members, and stored priorities in parallel
+      const [rawCards, rawLists, rawMembers, storedPriorities] = await Promise.all([
         getBoardCardsWithChecklists(t, board.id),
         getBoardLists(t, board.id),
         getBoardMembers(t, board.id),
+        getStoredPriorities(t, board.id),
       ]);
 
       // Filter out any closed/archived lists from Trello & sort by board pos order!
@@ -308,6 +358,11 @@ export default function ChecklistDashboard({ t }) {
             }
 
             const memberId = ci.idMember || (card.idMembers && card.idMembers[0]) || null;
+            const itemKey = ci.id;
+            const parsedPriority =
+              storedPriorities[itemKey] ||
+              detectPriorityFromTitle(ci.name) ||
+              "MEDIUM";
 
             flatItems.push({
               id: `${card.id}-${cl.id}-${ci.id}`,
@@ -318,7 +373,7 @@ export default function ChecklistDashboard({ t }) {
               idList: card.idList,
               title: ci.name,
               checklistName: cl.name,
-              priority: "MEDIUM",
+              priority: parsedPriority,
               parentCard: cardShort,
               parentCardFull: cardName,
               listName,
@@ -894,9 +949,15 @@ export default function ChecklistDashboard({ t }) {
         }
 
         // 3. Create check item in the checklist
-        await createCheckItem(t, checklistId, newTaskTitle.trim(), {
+        const createdCi = await createCheckItem(t, checklistId, newTaskTitle.trim(), {
           idMember: newTaskAssignee || null,
         });
+
+        // 3.5 Persist custom priority for this check item
+        const chosenPriority = newTaskPriority || "MEDIUM";
+        if (createdCi?.id && boardId) {
+          await saveItemPriority(t, boardId, createdCi.id, chosenPriority);
+        }
 
         // 4. Reload live board data directly from Trello REST API
         await loadRealData();
@@ -911,11 +972,12 @@ export default function ChecklistDashboard({ t }) {
       }
 
       // Offline / fallback local state creation
+      const chosenPriority = newTaskPriority || "MEDIUM";
       const newItem = {
         id: `item-${Date.now()}`,
         title: newTaskTitle.trim(),
         checklistName: checklistName,
-        priority: newTaskPriority || "MEDIUM",
+        priority: chosenPriority,
         parentCard: cardName.length > 30 ? cardName.slice(0, 28) + "…" : cardName,
         parentCardFull: cardName,
         listName: targetListName,
@@ -927,6 +989,8 @@ export default function ChecklistDashboard({ t }) {
         isDueToday: dueDateLabel.toLowerCase().includes("today"),
         isOverdue: false,
       };
+
+      await saveItemPriority(t, boardId, newItem.id, chosenPriority);
 
       setItems((prev) => [newItem, ...prev]);
       setIsAddTaskOpen(false);
@@ -1469,7 +1533,21 @@ export default function ChecklistDashboard({ t }) {
                           <div className="item-meta-line">
                             <span>Checklist: {item.checklistName}</span>
                             <span className="dot-divider">·</span>
-                            <span className={`priority-tag ${priorityClass}`}>
+                            <span
+                              className={`priority-tag ${priorityClass} priority-interactive`}
+                              title="Click to cycle priority (Low → Medium → High → Critical)"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const cycle = { LOW: "MEDIUM", MEDIUM: "HIGH", HIGH: "CRITICAL", CRITICAL: "LOW" };
+                                const nextP = cycle[item.priority] || "MEDIUM";
+                                const rawCiId = item._rawCheckItemId || item.id.split("-")[2] || item.id;
+                                setItems((prev) =>
+                                  prev.map((it) => (it.id === item.id ? { ...it, priority: nextP } : it))
+                                );
+                                await saveItemPriority(t, item.boardId, rawCiId, nextP);
+                                showToast(`Priority changed to ${nextP}`);
+                              }}
+                            >
                               {item.priority}
                             </span>
                           </div>
@@ -2082,17 +2160,26 @@ export default function ChecklistDashboard({ t }) {
             <div className="modal-dialog inspector-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span className={`priority-tag ${
-                    previewItem.priority === "CRITICAL"
-                      ? "priority-critical"
-                      : previewItem.priority === "HIGH"
-                      ? "priority-high"
-                      : previewItem.priority === "MEDIUM"
-                      ? "priority-medium"
-                      : "priority-low"
-                  }`}>
-                    {previewItem.priority}
-                  </span>
+                  <select
+                    className={`priority-select-badge priority-${(previewItem.priority || "MEDIUM").toLowerCase()}`}
+                    value={previewItem.priority || "MEDIUM"}
+                    onChange={async (e) => {
+                      const newP = e.target.value;
+                      const rawCiId = previewItem._rawCheckItemId || previewItem.id.split("-")[2] || previewItem.id;
+                      setPreviewItem((prev) => ({ ...prev, priority: newP }));
+                      setItems((prev) =>
+                        prev.map((it) => (it.id === previewItem.id ? { ...it, priority: newP } : it))
+                      );
+                      await saveItemPriority(t, previewItem.boardId, rawCiId, newP);
+                      showToast(`Priority changed to ${newP}`);
+                    }}
+                    title="Click to change task priority"
+                  >
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
                   <h2 className="modal-title" style={{ fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
                     <EyeIcon width={16} height={16} style={{ color: "var(--blue)" }} />
                     Task Inspector
