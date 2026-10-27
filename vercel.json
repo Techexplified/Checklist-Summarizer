@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/screenshots/:path*",
+      "destination": "/Screenshots/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
