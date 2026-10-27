@@ -893,7 +893,18 @@ export default function ChecklistDashboard({ t }) {
       const cardName = newTaskCard.trim() || (cardsInTargetList[0] || "General Tasks");
       const checklistName = newTaskChecklist.trim() || "Checklist";
       const boardId = newTaskBoard || boards[0]?.id || "default_board";
-      const dueDateLabel = newTaskDue.trim() || "No Due Date";
+
+      let isoDue = null;
+      let dueDateLabel = "No Due Date";
+      if (newTaskDue) {
+        try {
+          const d = new Date(newTaskDue);
+          if (!isNaN(d.getTime())) {
+            isoDue = d.toISOString();
+            dueDateLabel = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          }
+        } catch (e) {}
+      }
 
       // Determine chosen list ID and name
       const chosenListObj = availableLists.find((l) => l.id === newTaskTargetList) || availableLists[0];
@@ -948,8 +959,9 @@ export default function ChecklistDashboard({ t }) {
           throw new Error("Unable to identify or create checklist on card.");
         }
 
-        // 3. Create check item in the checklist
+        // 3. Create check item in the checklist (with due date)
         const createdCi = await createCheckItem(t, checklistId, newTaskTitle.trim(), {
+          due: isoDue,
           idMember: newTaskAssignee || null,
         });
 
@@ -2103,14 +2115,58 @@ export default function ChecklistDashboard({ t }) {
 
                 <div className="form-row" style={{ marginBottom: 0 }}>
                   <div className="form-group">
-                    <label className="form-label">Due Date</label>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <label className="form-label">Due Date</label>
+                      {newTaskDue && (
+                        <button
+                          type="button"
+                          className="btn-clear-date"
+                          onClick={() => setNewTaskDue("")}
+                        >
+                          Clear Date
+                        </button>
+                      )}
+                    </div>
                     <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. Tomorrow, Oct 30, or Nov 5"
+                      type="date"
+                      className="form-input form-date-picker"
                       value={newTaskDue}
                       onChange={(e) => setNewTaskDue(e.target.value)}
                     />
+                    <div className="date-quick-presets">
+                      <button
+                        type="button"
+                        className="preset-pill"
+                        onClick={() => {
+                          const today = new Date().toISOString().split("T")[0];
+                          setNewTaskDue(today);
+                        }}
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        className="preset-pill"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 1);
+                          setNewTaskDue(d.toISOString().split("T")[0]);
+                        }}
+                      >
+                        Tomorrow
+                      </button>
+                      <button
+                        type="button"
+                        className="preset-pill"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 7);
+                          setNewTaskDue(d.toISOString().split("T")[0]);
+                        }}
+                      >
+                        Next Week
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

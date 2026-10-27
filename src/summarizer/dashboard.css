@@ -1128,6 +1128,65 @@ select option,
   min-height: 80px;
 }
 
+/* Date Picker & Presets */
+.form-date-picker {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.form-date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity 0.15s ease;
+}
+
+.form-date-picker::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(1);
+}
+
+.btn-clear-date {
+  background: none;
+  border: none;
+  color: #ff7b72;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s ease;
+}
+.btn-clear-date:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.date-quick-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.preset-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-pill:hover {
+  background: rgba(56, 139, 253, 0.15);
+  border-color: rgba(56, 139, 253, 0.4);
+  color: #58a6ff;
+}
+
 .flex-1 { flex: 1; }
 
 /* Custom Combobox / Card Autocomplete */
