@@ -49,18 +49,8 @@ export default function SettingsPopup({ t }) {
       setMember(profile);
       setStatus("connected");
     } catch (err) {
-      if (err.message === NOT_AUTHORIZED) {
-        setStatus("unauthenticated");
-      } else {
-        // Fallback profile if offline / dev mock
-        const mockFallback = {
-          fullName: "Sprint Team Member",
-          username: "checklist_lead",
-          initials: "CS",
-        };
-        setMember(mockFallback);
-        setStatus("connected");
-      }
+      setMember(null);
+      setStatus("unauthenticated");
     }
   }
 

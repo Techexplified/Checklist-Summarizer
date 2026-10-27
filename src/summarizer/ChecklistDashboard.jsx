@@ -1,10 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
-  INITIAL_BOARDS,
-  INITIAL_ASSIGNEES,
-  INITIAL_CHECKLIST_ITEMS,
-} from "../data/mockDashboardData.js";
-import {
   isAuthorized,
   getToken,
   saveToken,
@@ -56,17 +51,17 @@ import {
 export default function ChecklistDashboard({ t }) {
   // ── Live data state ──────────────────────────────────────────────────────
   const [isLive, setIsLive] = useState(false);          // true = real Trello data loaded
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);     // starts as true while fetching real data from Trello
   const [liveBoards, setLiveBoards] = useState([]);     // [{id, name, color}]
   const [liveAssignees, setLiveAssignees] = useState([]); // [{id, name, initials, bg}]
   const [liveLists, setLiveLists] = useState([]);       // [{id, name}]
   const [liveCards, setLiveCards] = useState([]);       // raw cards from board
 
-  const boards = isLive ? liveBoards : INITIAL_BOARDS;
-  const assignees = isLive ? liveAssignees : INITIAL_ASSIGNEES;
+  const boards = liveBoards;
+  const assignees = liveAssignees;
 
   // ── Item list ──────────────────────────────────────────────────────────
-  const [items, setItems] = useState(INITIAL_CHECKLIST_ITEMS);
+  const [items, setItems] = useState([]);
   const [selectedItemIds, setSelectedItemIds] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | INCOMPLETE | COMPLETED
@@ -139,11 +134,7 @@ export default function ChecklistDashboard({ t }) {
     if (uniqueLists.length > 0) {
       return uniqueLists.map((name, i) => ({ id: `list_${i}`, name }));
     }
-    return [
-      { id: "list_todo", name: "To Do" },
-      { id: "list_in_progress", name: "In Progress" },
-      { id: "list_done", name: "Done" },
-    ];
+    return [];
   }, [liveLists, uniqueLists]);
 
   function showToast(text) {
@@ -185,7 +176,10 @@ export default function ChecklistDashboard({ t }) {
   const [needsAuth, setNeedsAuth] = useState(false);
 
   const loadRealData = useCallback(async () => {
-    if (!t) return;
+    if (!t) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setNeedsAuth(false);
     try {
@@ -313,6 +307,12 @@ export default function ChecklistDashboard({ t }) {
       }
     } catch (err) {
       console.error("loadRealData failed:", err);
+      setIsLive(false);
+      setLiveBoards([]);
+      setLiveAssignees([]);
+      setLiveLists([]);
+      setLiveCards([]);
+      setItems([]);
       if (err?.message === "NOT_AUTHORIZED" || String(err?.message).includes("NOT_AUTHORIZED")) {
         // Token missing — prompt user to connect via Settings
         setNeedsAuth(true);
@@ -474,7 +474,11 @@ export default function ChecklistDashboard({ t }) {
     setIsLive(false);
     setAuthStatus("unauthenticated");
     setCurrentMember(null);
-    setItems(INITIAL_CHECKLIST_ITEMS);
+    setLiveBoards([]);
+    setLiveAssignees([]);
+    setLiveLists([]);
+    setLiveCards([]);
+    setItems([]);
     showToast("Disconnected from Trello.");
   }
 
@@ -1067,8 +1071,8 @@ export default function ChecklistDashboard({ t }) {
             <span className="metric-label">Total Items</span>
             <SlidersIcon width={15} height={15} className="metric-icon-muted" />
           </div>
-          <div className="metric-value">{totalItems}</div>
-          <div className="metric-subtext">Across synced cards</div>
+          <div className="metric-value">{isLoading ? "…" : totalItems}</div>
+          <div className="metric-subtext">{isLoading ? "Loading from board…" : "Across synced cards"}</div>
         </div>
 
         {/* Card 2: Completion Rate */}
@@ -1078,13 +1082,13 @@ export default function ChecklistDashboard({ t }) {
             <CheckCircleIcon width={15} height={15} className="metric-icon-green" />
           </div>
           <div className="metric-value-row">
-            <span className="metric-value">{completionPercent}%</span>
-            <span className="metric-count">({completedCount}/{totalItems})</span>
+            <span className="metric-value">{isLoading ? "…" : `${completionPercent}%`}</span>
+            <span className="metric-count">{isLoading ? "" : `(${completedCount}/${totalItems})`}</span>
           </div>
           <div className="metric-progress-track">
             <div
               className="metric-progress-fill"
-              style={{ width: `${completionPercent}%` }}
+              style={{ width: isLoading ? "0%" : `${completionPercent}%` }}
             />
           </div>
         </div>
@@ -1095,8 +1099,8 @@ export default function ChecklistDashboard({ t }) {
             <span className="metric-label">Pending</span>
             <ClockIcon width={15} height={15} className="metric-icon-blue" />
           </div>
-          <div className="metric-value">{pendingCount}</div>
-          <div className="metric-subtext">Require action</div>
+          <div className="metric-value">{isLoading ? "…" : pendingCount}</div>
+          <div className="metric-subtext">{isLoading ? "Loading from board…" : "Require action"}</div>
         </div>
 
         {/* Card 4: Overdue */}
@@ -1105,8 +1109,8 @@ export default function ChecklistDashboard({ t }) {
             <span className="metric-label red">Overdue</span>
             <AlertTriangleIcon width={15} height={15} className="metric-icon-red" />
           </div>
-          <div className="metric-value red">{overdueCount}</div>
-          <div className="metric-subtext red">Past deadline</div>
+          <div className="metric-value red">{isLoading ? "…" : overdueCount}</div>
+          <div className="metric-subtext red">{isLoading ? "Loading from board…" : "Past deadline"}</div>
         </div>
 
         {/* Card 5: Due Today */}
@@ -1115,8 +1119,8 @@ export default function ChecklistDashboard({ t }) {
             <span className="metric-label amber">Due Today</span>
             <CalendarIcon width={15} height={15} className="metric-icon-amber" />
           </div>
-          <div className="metric-value amber">{dueTodayCount}</div>
-          <div className="metric-subtext amber">Action needed</div>
+          <div className="metric-value amber">{isLoading ? "…" : dueTodayCount}</div>
+          <div className="metric-subtext amber">{isLoading ? "Loading from board…" : "Action needed"}</div>
         </div>
       </div>
 
@@ -1713,21 +1717,61 @@ export default function ChecklistDashboard({ t }) {
               return filteredItems.map((item) => renderTableRow(item));
             })()}
 
-            {filteredItems.length === 0 && (
+            {isLoading ? (
               <tr>
                 <td colSpan={7} className="td-empty">
-                  <div className="empty-state-box">
-                    <SlidersIcon width={32} height={32} style={{ color: "#94a3b8", margin: "0 auto 10px" }} />
-                    <p style={{ margin: 0, fontWeight: 600, color: "#e2e8f0", fontSize: "14px" }}>
-                      No checklist tasks found
+                  <div className="empty-state-box" style={{ padding: "40px 20px" }}>
+                    <span className="spin-icon" style={{ display: "inline-flex", animation: "spin 1s linear infinite", color: "var(--blue-hover)", marginBottom: "12px" }}>
+                      <RefreshCwIcon width={30} height={30} />
+                    </span>
+                    <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                      Loading real checklist data…
                     </p>
-                    <p style={{ margin: "4px 0 0", color: "#8b949e", fontSize: "12px" }}>
-                      Try clearing your search query or adjusting your status filters.
+                    <p style={{ margin: "6px 0 0", color: "var(--text-muted)", fontSize: "12px" }}>
+                      Fetching cards and checklists from your Trello board
                     </p>
                   </div>
                 </td>
               </tr>
-            )}
+            ) : needsAuth ? (
+              <tr>
+                <td colSpan={7} className="td-empty">
+                  <div className="empty-state-box" style={{ padding: "40px 20px" }}>
+                    <AlertCircleIcon width={32} height={32} style={{ color: "var(--amber)", margin: "0 auto 12px" }} />
+                    <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                      Authorization Required
+                    </p>
+                    <p style={{ margin: "4px 0 16px", color: "var(--text-muted)", fontSize: "12px" }}>
+                      Connect your Trello account to view real checklists from this board.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-modal-primary"
+                      onClick={handleConnectTrello}
+                      style={{ padding: "8px 18px", fontSize: "13px" }}
+                    >
+                      Connect Trello Account
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="td-empty">
+                  <div className="empty-state-box" style={{ padding: "36px 20px" }}>
+                    <SlidersIcon width={32} height={32} style={{ color: "var(--text-muted)", margin: "0 auto 10px" }} />
+                    <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                      {items.length === 0 ? "No checklist items found on this board" : "No matching checklist tasks"}
+                    </p>
+                    <p style={{ margin: "6px auto 0", color: "var(--text-muted)", fontSize: "12px", maxWidth: "420px", lineHeight: 1.5 }}>
+                      {items.length === 0
+                        ? "Checklists created on cards across this board will automatically appear here. Click \"Add Task (Checklist)\" above to add one now."
+                        : "Try clearing your search query or adjusting your filters."}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -2342,32 +2386,29 @@ export default function ChecklistDashboard({ t }) {
                 )}
               </div>
 
-              {/* Demo Mode Toggle */}
+              {/* Board Synchronization */}
               <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border-subtle)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <span style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-primary)", display: "block" }}>
-                      Demo / Sample Data
+                      Board Synchronization
                     </span>
                     <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                      {isLive ? "Currently showing live Trello board data" : "Currently showing mock sprint sample data"}
+                      Sync cards and checklists from your live Trello board
                     </span>
                   </div>
                   <button
                     type="button"
                     className="btn-light-action"
-                    style={{ padding: "5px 10px", fontSize: "11px" }}
+                    style={{ padding: "6px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                     onClick={() => {
-                      if (isLive) {
-                        setIsLive(false);
-                        setItems(INITIAL_CHECKLIST_ITEMS);
-                        showToast("Loaded demo sample dataset.");
-                      } else {
-                        loadRealData();
-                      }
+                      loadRealData();
+                      showToast("Syncing with Trello board…");
                     }}
+                    disabled={isLoading}
                   >
-                    {isLive ? "Load Demo Data" : "Refresh Board"}
+                    <RefreshCwIcon width={12} height={12} style={{ animation: isLoading ? "spin 1s linear infinite" : "none" }} />
+                    <span>{isLoading ? "Syncing…" : "Sync Board"}</span>
                   </button>
                 </div>
               </div>
