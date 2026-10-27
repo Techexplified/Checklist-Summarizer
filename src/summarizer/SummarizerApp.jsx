@@ -171,10 +171,7 @@ export default function SummarizerApp({ t }) {
           const authed = await isAuthorized(t).catch(() => false);
           if (authed) {
             try {
-              const apiChecklists = await getCardChecklists(t, cardId).catch((err) => {
-                console.error("Failed to fetch card checklists via API", err);
-                return null;
-              });
+              const apiChecklists = await getCardChecklists(t, cardId).catch(() => null);
               if (Array.isArray(apiChecklists) && apiChecklists.length > 0) {
                 checklists = apiChecklists;
               }
@@ -221,7 +218,7 @@ export default function SummarizerApp({ t }) {
         });
       }
     } catch (err) {
-      console.error("Failed to load summarizer data", err);
+      // Graceful fallback
     } finally {
       setLoading(false);
     }

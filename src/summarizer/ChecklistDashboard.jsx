@@ -228,7 +228,7 @@ export default function ChecklistDashboard({ t }) {
         await navigator.clipboard.writeText(text);
         return true;
       } catch (err) {
-        console.warn("navigator.clipboard.writeText failed in iframe, using execCommand fallback:", err);
+        // Fallback below
       }
     }
     try {
@@ -245,7 +245,6 @@ export default function ChecklistDashboard({ t }) {
       document.body.removeChild(textarea);
       return successful;
     } catch (e) {
-      console.error("execCommand copy failed:", e);
       return false;
     }
   }
@@ -399,7 +398,6 @@ export default function ChecklistDashboard({ t }) {
         showToast(`Loaded ${flatItems.length} checklist items from Trello`);
       }
     } catch (err) {
-      console.error("loadRealData failed:", err);
       setIsLive(false);
       setLiveBoards([]);
       setLiveAssignees([]);
@@ -410,7 +408,7 @@ export default function ChecklistDashboard({ t }) {
         // Token missing — prompt user to connect via Settings
         setNeedsAuth(true);
       } else {
-        showToast("Failed to load Trello data. Check console for details.");
+        showToast("Unable to load Trello data. Please check your connection in Settings.");
       }
     } finally {
       setIsLoading(false);
@@ -845,7 +843,7 @@ export default function ChecklistDashboard({ t }) {
         setPreviewItem(null);
         return;
       } catch (err) {
-        console.warn("t.showCard failed, trying URL navigation:", err);
+        // Try fallback navigation below
       }
     }
 
@@ -859,7 +857,7 @@ export default function ChecklistDashboard({ t }) {
         setPreviewItem(null);
         return;
       } catch (err) {
-        console.warn("t.navigate failed:", err);
+        // Try fallback navigation below
       }
     }
 
@@ -1012,7 +1010,6 @@ export default function ChecklistDashboard({ t }) {
       setNewTaskDue("");
       showToast(`Added: "${newItem.title.slice(0, 32)}..." in ${targetListName}`);
     } catch (err) {
-      console.error("Failed to create task on Trello:", err);
       showToast(`Creation error: ${err.message || "Failed to create task on Trello"}`);
     } finally {
       setIsCreatingTask(false);
